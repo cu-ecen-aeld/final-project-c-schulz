@@ -22,6 +22,9 @@ MQTT_DEFAULT_DEFCONFIG=$(RPI_DEFCONFIG)
 MQTT_MODIFIED_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG)
 MQTT_MODIFIED_DEFCONFIG_REL_BUILDROOT=../$(MQTT_MODIFIED_DEFCONFIG)
 
+# target device for flashing (SD card)
+MQTT_TARGET_DEVICE?=/dev/sde
+
 
 all: build-image
 
@@ -59,6 +62,11 @@ ifneq (,$(wildcard buildroot/.config))
 			$(MAKE) -C buildroot linux-update-defconfig; \
 		fi
 endif
+
+install:
+	@echo -n "You are about to flash device $(MQTT_TARGET_DEVICE). Are you sure? [y/N]" && read ans && if [ $${ans:-'N'} = 'y' ]; then \
+		dd if=./buildroot/output/images/sdcard.img of=$(MQTT_TARGET_DEVICE) status=progress; \
+	fi
 
 clean:
 	$(MAKE) -C buildroot distclean
