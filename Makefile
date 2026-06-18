@@ -65,13 +65,13 @@ ifeq (,$(wildcard $(BUILDROOT_CONFIG)))
 ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
 			@echo "USING ${MODIFIED_RPI_DEFCONFIG}"
 			$(MAKE) wifi
-			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT)
+			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT):../buildroot-externals BR2_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT)
 			$(MAKE) reset-wifi
 else
 			@echo "USING ${RPI_DEFCONFIG}"
 			@echo "Run 'make save-defconfig' to save this as the default configuration in ${MODIFIED_RPI_DEFCONFIG}"
 			@echo "Then add packages as needed to complete the installation, re-running 'make save-defconfig' as needed"
-			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(RPI_DEFCONFIG)
+			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT):../buildroot-externals BR2_DEFCONFIG=$(RPI_DEFCONFIG)
 endif
 else
 		@echo "USING EXISTING BUILDROOT CONFIG"
@@ -79,7 +79,7 @@ endif
 
 build: submodule config
 	@echo "To force update, delete .config or make changes using make menuconfig and build again."
-	$(MAKE) -C buildroot BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT)
+	$(MAKE) -C buildroot BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT):../buildroot-externals
 
 save-menuconfig:
 	mkdir -p $(basename $(MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT))
