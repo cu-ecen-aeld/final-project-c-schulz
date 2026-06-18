@@ -17,11 +17,18 @@ EXTERNAL_CONFIG_REL_BUILDROOT=$(EXTERNAL_REL_BUILDROOT)/configs
 RPI_DEFCONFIG=configs/raspberrypi0w_defconfig
 # place to store the modified defconfig
 MODIFIED_RPI_DEFCONFIG=$(EXTERNAL_CONFIG_REL_BUILDROOT)/mqtt_rpi_defconfig
+# place inside buildroot where the config needs to be stored before compiling
+BUILDROOT_DIR=./buildroot
+BUILDROOT_CONFIG=$(BUILDROOT_DIR)/.config
 
 # defconfig from buildroot directory used for mqtt event logger builds
 MQTT_DEFAULT_DEFCONFIG=$(RPI_DEFCONFIG)
 MQTT_MODIFIED_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG)
 MQTT_MODIFIED_DEFCONFIG_REL_BUILDROOT=../$(MQTT_MODIFIED_DEFCONFIG)
+
+# wifi configuration
+MQTT_WIFI_SSID=
+MQTT_WIFI_PWD=
 
 # target device for flashing (SD card)
 MQTT_TARGET_DEVICE?=/dev/sde
@@ -34,8 +41,22 @@ submodule:
 	git submodule sync
 	git submodule update
 
-config: submodule
-ifeq (,$(wildcard ./buildroot/.config))
+wifi: submodule
+ifneq (,$(wildcard $(BUILDROOT_DIR)/$(MODIFIED_RPI_DEFCONFIG)))
+ifeq (,$(MQTT_WIFI_SSID))
+	@echo "WiFi SSID not configured. Try again with 'MQTT_WIFI_SSID=**** MQTT_WIFI_PWD=****'!"
+	@exit 1
+else ifeq (,$(MQTT_WIFI_PWD))
+	@echo "WiFi password not configured. Try again with 'MQTT_WIFI_SSID=**** MQTT_WIFI_PWD=****'!"
+	@exit 1
+else
+	sed -i "s/BR2_PACKAGE_RPI_WIFI_SSID=.*/BR2_PACKAGE_RPI_WIFI_SSID=\"$(MQTT_WIFI_SSID)\"/g" $(BUILDROOT_DIR)/$(MODIFIED_RPI_DEFCONFIG)
+	sed -i "s/BR2_PACKAGE_RPI_WIFI_PWD=.*/BR2_PACKAGE_RPI_WIFI_PWD=\"$(MQTT_WIFI_PWD)\"/g"    $(BUILDROOT_DIR)/$(MODIFIED_RPI_DEFCONFIG)
+endif
+endif
+
+config: submodule wifi
+ifeq (,$(wildcard $(BUILDROOT_CONFIG)))
 		@echo "MISSING BUILDROOT CONFIGURATION FILE"
 ifneq (,$(wildcard $(MQTT_MODIFIED_DEFCONFIG)))
 			@echo "USING ${MQTT_MODIFIED_DEFCONFIG}"
@@ -57,9 +78,9 @@ build: submodule config
 save-menuconfig:
 	mkdir -p $(EXTERNAL_CONFIG_REL_BUILDROOT)
 	$(MAKE) -C buildroot savedefconfig BR2_DEFCONFIG=$(MQTT_MODIFIED_DEFCONFIG_REL_BUILDROOT)
-ifneq (,$(wildcard buildroot/.config))
+ifneq (,$(wildcard $(BUILDROOT_CONFIG)))
 		@if ls buildroot/output/build/linux-*/.config >/dev/null 2>&1 && \
-			grep -q "BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE" buildroot/.config; then \
+			grep -q "BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE" ${BUILDROOT_CONFIG}; then \
 			echo "Saving linux defconfig"; \
 			$(MAKE) -C buildroot linux-update-defconfig; \
 		fi
@@ -74,7 +95,7 @@ install:
 	fi
 
 clean-config:
-	rm -f ./buildroot/.config
+	rm -f $(BUILDROOT_CONFIG)
 
 clean: clean-config
 	$(MAKE) -C buildroot distclean
