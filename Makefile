@@ -10,28 +10,25 @@
 
 
 # external base for additional buildroot sources
-EXTERNAL_REL_BUILDROOT=../base-external
-EXTERNAL_CONFIG_REL_BUILDROOT=$(EXTERNAL_REL_BUILDROOT)/configs
+EXTERNAL_DIR=base-external
+EXTERNAL_REL_BUILDROOT=../$(EXTERNAL_DIR)
 
 # defconfig from buildroot directory used as prior for the raspberry pi build
 RPI_DEFCONFIG=configs/raspberrypi0w_defconfig
 # place to store the modified defconfig
-MODIFIED_RPI_DEFCONFIG=$(EXTERNAL_CONFIG_REL_BUILDROOT)/mqtt_rpi_defconfig
+MODIFIED_RPI_DEFCONFIG=$(EXTERNAL_DIR)/configs/mqtt_rpi_defconfig
+MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT=../$(MODIFIED_RPI_DEFCONFIG)
+
 # place inside buildroot where the config needs to be stored before compiling
-BUILDROOT_DIR=./buildroot
+BUILDROOT_DIR=buildroot
 BUILDROOT_CONFIG=$(BUILDROOT_DIR)/.config
 
-# defconfig from buildroot directory used for mqtt event logger builds
-MQTT_DEFAULT_DEFCONFIG=$(RPI_DEFCONFIG)
-MQTT_MODIFIED_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG)
-MQTT_MODIFIED_DEFCONFIG_REL_BUILDROOT=../$(MQTT_MODIFIED_DEFCONFIG)
-
-# wifi configuration
-MQTT_WIFI_SSID=
-MQTT_WIFI_PWD=
+# variables for wifi configuration
+WIFI_SSID=
+WIFI_PWD=
 
 # target device for flashing (SD card)
-MQTT_TARGET_DEVICE?=/dev/sde
+TARGET_DEVICE?=/dev/sde
 
 
 all: build
@@ -42,30 +39,39 @@ submodule:
 	git submodule update
 
 wifi: submodule
-ifneq (,$(wildcard $(BUILDROOT_DIR)/$(MODIFIED_RPI_DEFCONFIG)))
-ifeq (,$(MQTT_WIFI_SSID))
-	@echo "WiFi SSID not configured. Try again with 'MQTT_WIFI_SSID=**** MQTT_WIFI_PWD=****'!"
+ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
+ifeq (,$(WIFI_SSID))
+	@echo "WiFi SSID not configured. Try again with 'WIFI_SSID=**** WIFI_PWD=****'!"
 	@exit 1
-else ifeq (,$(MQTT_WIFI_PWD))
-	@echo "WiFi password not configured. Try again with 'MQTT_WIFI_SSID=**** MQTT_WIFI_PWD=****'!"
+else ifeq (,$(WIFI_PWD))
+	@echo "WiFi password not configured. Try again with 'WIFI_SSID=**** WIFI_PWD=****'!"
 	@exit 1
 else
-	sed -i "s/BR2_PACKAGE_RPI_WIFI_SSID=.*/BR2_PACKAGE_RPI_WIFI_SSID=\"$(MQTT_WIFI_SSID)\"/g" $(BUILDROOT_DIR)/$(MODIFIED_RPI_DEFCONFIG)
-	sed -i "s/BR2_PACKAGE_RPI_WIFI_PWD=.*/BR2_PACKAGE_RPI_WIFI_PWD=\"$(MQTT_WIFI_PWD)\"/g"    $(BUILDROOT_DIR)/$(MODIFIED_RPI_DEFCONFIG)
+	sed -i "s/BR2_PACKAGE_RPI_WIFI_SSID=.*/BR2_PACKAGE_RPI_WIFI_SSID=\"$(WIFI_SSID)\"/g" $(MODIFIED_RPI_DEFCONFIG)
+	sed -i "s/BR2_PACKAGE_RPI_WIFI_PWD=.*/BR2_PACKAGE_RPI_WIFI_PWD=\"$(WIFI_PWD)\"/g"    $(MODIFIED_RPI_DEFCONFIG)
 endif
 endif
 
-config: submodule wifi
+reset-wifi:
+ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
+	sed -i "s/BR2_PACKAGE_RPI_WIFI_SSID=.*/BR2_PACKAGE_RPI_WIFI_SSID=\"****\"/g" $(MODIFIED_RPI_DEFCONFIG)
+	sed -i "s/BR2_PACKAGE_RPI_WIFI_PWD=.*/BR2_PACKAGE_RPI_WIFI_PWD=\"****\"/g"   $(MODIFIED_RPI_DEFCONFIG)
+endif
+
+config: submodule
 ifeq (,$(wildcard $(BUILDROOT_CONFIG)))
 		@echo "MISSING BUILDROOT CONFIGURATION FILE"
-ifneq (,$(wildcard $(MQTT_MODIFIED_DEFCONFIG)))
-			@echo "USING ${MQTT_MODIFIED_DEFCONFIG}"
-			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(MQTT_MODIFIED_DEFCONFIG_REL_BUILDROOT)
+		@echo $(MODIFIED_RPI_DEFCONFIG)
+ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
+			@echo "USING ${MODIFIED_RPI_DEFCONFIG}"
+			$(MAKE) wifi
+			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT)
+			$(MAKE) reset-wifi
 else
-			@echo "USING ${MQTT_DEFAULT_DEFCONFIG}"
-			@echo "Run 'make save-defconfig' to save this as the default configuration in ${MQTT_MODIFIED_DEFCONFIG}"
+			@echo "USING ${RPI_DEFCONFIG}"
+			@echo "Run 'make save-defconfig' to save this as the default configuration in ${MODIFIED_RPI_DEFCONFIG}"
 			@echo "Then add packages as needed to complete the installation, re-running 'make save-defconfig' as needed"
-			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(MQTT_DEFAULT_DEFCONFIG)
+			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(RPI_DEFCONFIG)
 endif
 else
 		@echo "USING EXISTING BUILDROOT CONFIG"
@@ -76,8 +82,9 @@ build: submodule config
 	$(MAKE) -C buildroot BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT)
 
 save-menuconfig:
-	mkdir -p $(EXTERNAL_CONFIG_REL_BUILDROOT)
-	$(MAKE) -C buildroot savedefconfig BR2_DEFCONFIG=$(MQTT_MODIFIED_DEFCONFIG_REL_BUILDROOT)
+	mkdir -p $(basename $(MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT))
+	$(MAKE) -C buildroot savedefconfig BR2_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT)
+	$(MAKE) reset-wifi
 ifneq (,$(wildcard $(BUILDROOT_CONFIG)))
 		@if ls buildroot/output/build/linux-*/.config >/dev/null 2>&1 && \
 			grep -q "BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE" ${BUILDROOT_CONFIG}; then \
@@ -90,8 +97,8 @@ menuconfig:
 	$(MAKE) -C buildroot menuconfig
 
 install:
-	@echo -n "You are about to flash device $(MQTT_TARGET_DEVICE). Are you sure? [y/N]" && read ans && if [ $${ans:-'N'} = 'y' ]; then \
-		dd if=./buildroot/output/images/sdcard.img of=$(MQTT_TARGET_DEVICE) status=progress; \
+	@echo -n "You are about to flash device $(TARGET_DEVICE). Are you sure? [y/N]" && read ans && if [ $${ans:-'N'} = 'y' ]; then \
+		dd if=./buildroot/output/images/sdcard.img of=$(TARGET_DEVICE) status=progress; \
 	fi
 
 clean-config:
