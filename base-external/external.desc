@@ -1,2 +1,2 @@
-name: project_base
+name: MQTT_EVENT_LOGGER
 desc: MQTT Event Logger external project tree

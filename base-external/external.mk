@@ -1,0 +1,1 @@
+include $(BR2_EXTERNAL_MQTT_EVENT_LOGGER_PATH)/package/rpi-wifi/rpi-wifi.mk

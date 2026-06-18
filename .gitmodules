@@ -1,3 +1,6 @@
 [submodule "buildroot"]
 	path = buildroot
 	url = https://gitlab.com/buildroot.org/buildroot
+[submodule "buildroot-externals"]
+	path = buildroot-externals
+	url = https://github.com/sirsipe/buildroot-externals.git
