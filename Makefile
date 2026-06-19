@@ -2,15 +2,15 @@
 # - update-submodule: updates all existing git submodules
 # - build-image: updates submodules, creates the buildroot config and builds the image
 #                1) re-uses existing config in ./buildroot/.config or
-#                2) re-uses config from base-external/configs or
+#                2) re-uses config from mqtt-event-logger/configs or
 #                3) creates new config from default config
-# - save-defconfig: save current config from ./buildroot/.config to base-external/configs
+# - save-defconfig: save current config from ./buildroot/.config to mqtt-event-logger/configs
 # - all: build the buildroot image
 # - clean: cleanup buildroot build
 
 
 # external base for additional buildroot sources
-EXTERNAL_DIR=base-external
+EXTERNAL_DIR=mqtt-event-logger
 EXTERNAL_REL_BUILDROOT=../$(EXTERNAL_DIR):../buildroot-externals
 
 # defconfig from buildroot directory used as prior for the raspberry pi build
