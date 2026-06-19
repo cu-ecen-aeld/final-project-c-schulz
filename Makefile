@@ -38,7 +38,7 @@ submodule:
 	git submodule sync
 	git submodule update
 
-wifi: submodule
+wifi:
 ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
 ifeq (,$(WIFI_SSID))
 	@echo "WiFi SSID not configured. Try again with 'WIFI_SSID=**** WIFI_PWD=****'!"
@@ -58,26 +58,26 @@ ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
 	sed -i "s/BR2_PACKAGE_RPI_WIFI_PWD=.*/BR2_PACKAGE_RPI_WIFI_PWD=\"****\"/g"   $(MODIFIED_RPI_DEFCONFIG)
 endif
 
-config: submodule
-ifeq (,$(wildcard $(BUILDROOT_CONFIG)))
-		@echo "MISSING BUILDROOT CONFIGURATION FILE"
-		@echo $(MODIFIED_RPI_DEFCONFIG)
+config:
 ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
-			@echo "USING ${MODIFIED_RPI_DEFCONFIG}"
-			$(MAKE) wifi
-			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT)
-			$(MAKE) reset-wifi
+	@echo "USING ${MODIFIED_RPI_DEFCONFIG}"
+	$(MAKE) wifi
+	$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(MODIFIED_RPI_DEFCONFIG_REL_BUILDROOT)
+	$(MAKE) reset-wifi
 else
-			@echo "USING ${RPI_DEFCONFIG}"
-			@echo "Run 'make save-defconfig' to save this as the default configuration in ${MODIFIED_RPI_DEFCONFIG}"
-			@echo "Then add packages as needed to complete the installation, re-running 'make save-defconfig' as needed"
-			$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(RPI_DEFCONFIG)
-endif
-else
-		@echo "USING EXISTING BUILDROOT CONFIG"
+	@echo "USING ${RPI_DEFCONFIG}"
+	@echo "Run 'make save-defconfig' to save this as the default configuration in ${MODIFIED_RPI_DEFCONFIG}"
+	@echo "Then add packages as needed to complete the installation, re-running 'make save-defconfig' as needed"
+	$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(RPI_DEFCONFIG)
 endif
 
-build: submodule config
+build: submodule
+ifeq (,$(wildcard $(BUILDROOT_CONFIG)))
+	@echo "MISSING BUILDROOT CONFIGURATION FILE"
+	$(MAKE) config
+else
+	@echo "USING EXISTING BUILDROOT CONFIG"
+endif
 	@echo "To force update, delete .config or make changes using make menuconfig and build again."
 	$(MAKE) -C buildroot BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT)
 
