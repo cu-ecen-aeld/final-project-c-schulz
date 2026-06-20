@@ -58,7 +58,7 @@ ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
 	sed -i "s/BR2_PACKAGE_RPI_WIFI_PWD=.*/BR2_PACKAGE_RPI_WIFI_PWD=\"****\"/g"   $(MODIFIED_RPI_DEFCONFIG)
 endif
 
-config:
+config: submodule
 ifneq (,$(wildcard $(MODIFIED_RPI_DEFCONFIG)))
 	@echo "USING ${MODIFIED_RPI_DEFCONFIG}"
 	$(MAKE) wifi
