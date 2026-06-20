@@ -41,7 +41,7 @@ TARGET_DEVICE?=/dev/sde
 
 ###
 # parameters for qemu build
-QEMU_DEFCONFIG=configs/qemu_arm_virt_defconfig
+QEMU_DEFCONFIG=configs/qemu_arm_versatile_defconfig
 MODIFIED_QEMU_DEFCONFIG=$(EXTERNAL_DIR)/configs/mqtt_qemu_defconfig
 MODIFIED_QEMU_DEFCONFIG_REL_BUILDROOT=../$(MODIFIED_QEMU_DEFCONFIG)
 
@@ -62,17 +62,21 @@ endif
 ###
 # make targets
 
+# by default, build image
 all: build
 
+# print main build parameters
 echo:
 	@echo QEMU_BUILD: $(QEMU_BUILD)
 	@echo DEFCONFIG: $(MODIFIED_DEFCONFIG)
 
+# update all submodules
 submodule:
 	git submodule init
 	git submodule sync
 	git submodule update
 
+# configure wifi settings in custom config with ssid and password
 wifi:
 ifneq (true,$(QEMU_BUILD))
 ifneq (,$(wildcard $(MODIFIED_DEFCONFIG)))
@@ -89,6 +93,7 @@ endif
 endif
 endif
 
+# reset wifi settings in custom config (to not accidentally push them on github)
 reset-wifi:
 ifneq (true,$(QEMU_BUILD))
 ifneq (,$(wildcard $(MODIFIED_DEFCONFIG)))
@@ -97,6 +102,7 @@ ifneq (,$(wildcard $(MODIFIED_DEFCONFIG)))
 endif
 endif
 
+# configure buildroot build with saved config; configure wifi settings for rpi build
 config: submodule
 ifneq (,$(wildcard $(MODIFIED_DEFCONFIG)))
 	@echo "USING ${MODIFIED_DEFCONFIG}"
@@ -110,6 +116,7 @@ else
 	$(MAKE) -C buildroot defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(DEFCONFIG)
 endif
 
+# compile buildroot image; when switching between qemu and rpi build, clean buildroot build first
 build: submodule
 ifneq (,$(wildcard $(DEFCONFIG_CONFIG)))
 	@if [ ! "${DEFCONFIG}" = "$$(cat ${DEFCONFIG_CONFIG})" ]; then \
@@ -128,6 +135,7 @@ endif
 	$(MAKE) -C buildroot BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT)
 	echo "$(DEFCONFIG)" > $(DEFCONFIG_CONFIG)
 
+# save current buildroot configuration to ./mqtt-event-logger/configs/mqtt_*_defconfig
 save-menuconfig:
 	mkdir -p $(basename $(MODIFIED_DEFCONFIG_REL_BUILDROOT))
 	$(MAKE) -C buildroot savedefconfig BR2_DEFCONFIG=$(MODIFIED_DEFCONFIG_REL_BUILDROOT)
@@ -140,9 +148,11 @@ ifneq (,$(wildcard $(BUILDROOT_CONFIG)))
 	fi
 endif
 
+# execute menuconfig in buildroot folder to customize build
 menuconfig:
 	$(MAKE) -C buildroot menuconfig
 
+# flash buildroot image to device (default: /dev/sde, modify with TARGET_DEVICE=/dev/xy)
 install:
 ifneq (false,$(QEMU_BUILD))
 	@echo -n "You are about to flash device $(TARGET_DEVICE). Are you sure? [y/N]" && read ans && if [ $${ans:-'N'} = 'y' ]; then \
@@ -152,8 +162,10 @@ else
 	@echo "TARGET UNDEFINED FOR QEMU_BUILD=true!"
 endif
 
+# delete buildroot configuration
 clean-config: reset-wifi
 	rm -f $(BUILDROOT_CONFIG)
 
+# cleanup buildroot build
 clean: clean-config
 	$(MAKE) -C buildroot distclean
