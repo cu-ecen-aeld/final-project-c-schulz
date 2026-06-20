@@ -132,8 +132,8 @@ else
 	@echo "USING EXISTING BUILDROOT CONFIG"
 endif
 	@echo "To force update, delete buildroot/.config or make changes using make menuconfig and build again."
-	$(MAKE) -C buildroot BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT)
 	echo "$(DEFCONFIG)" > $(DEFCONFIG_CONFIG)
+	$(MAKE) -C buildroot BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT)
 
 # save current buildroot configuration to ./mqtt-event-logger/configs/mqtt_*_defconfig
 save-menuconfig:
