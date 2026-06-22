@@ -39,11 +39,16 @@ build_image(){
   echo "Build buildroot image with qemu config"
   pushd $REPO_DIR
 
-  make clean && make QEMU_BUILD=true
-  rc=$?
-  popd
+  make config QEMU_BUILD=true
+  validate $?
 
-  validate $rc
+  make clean
+  validate $?
+
+  make QEMU_BUILD=true
+  validate $?
+
+  popd
 }
 
 # boot image with qemu
