@@ -1,0 +1,23 @@
+name: qemu-test
+on:
+    push:
+        tags-ignore:
+            - '*'
+        branches:
+            - '*'
+jobs:
+    start-stop-test:
+#        container: cuaesd/aesd-autotest:24-assignment7-buildroot
+        runs-on: self-hosted
+        timeout-minutes: 120
+        steps:
+          - name: Build image
+            run: ./test/validate.sh build
+          - name: Start image
+            run: ./test/validate.sh start
+          - name: Stop image
+            run: ./test/validate.sh stop
+          - name: Cleanup
+            if: always()
+            run: |
+              ssh-add -D
