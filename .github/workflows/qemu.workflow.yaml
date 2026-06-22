@@ -16,6 +16,8 @@ jobs:
             run: ./tests/validate.sh build
           - name: Start image
             run: ./tests/validate.sh start
+          - name: Test ssh access
+            run: ./tests/validate.sh ssh
           - name: Stop image
             run: ./tests/validate.sh stop
           - name: Cleanup

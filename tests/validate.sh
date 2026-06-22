@@ -26,7 +26,7 @@ try_cmd_for(){
   timeout_duration=$1
   sleep_duration=$2
   cmd=$3
-  echo $timeout_duration -- $sleep_duration -- $cmd
+  echo "Try for $timeout_duration: $cmd"
   timeout $timeout_duration bash -c "until $cmd; do echo $cmd; sleep $sleep_duration; done"
 }
 
@@ -49,6 +49,7 @@ build_image(){
   validate $?
 
   popd
+  echo "Built buildroot image with qemu config"
 }
 
 # boot image with qemu
@@ -57,7 +58,9 @@ start_qemu(){
   ${TEST_DIR}/runqemu.sh &
 
   validate $?
-  sleep 40
+  echo "Wait 30s for qemu instance to be up"
+  sleep 30
+  echo "Started qemu instance in background"
 }
 
 # kill qemu instance
@@ -66,6 +69,7 @@ stop_qemu(){
   killall -9 qemu-system-arm
 
   validate $?
+  echo "Stopped qemu instance"
 }
 
 # log in via ssh
@@ -73,9 +77,10 @@ login_ssh(){
   echo "Log in via ssh"
 
   ssh-keygen -f "${HOME}/.ssh/known_hosts" -R "[localhost]:2222"
-  try_cmd_for 180s 5 "tmpfile=`mktemp` && ssh_cmd 'exit' > ${tmpfile} 2>&1; cat ${tmpfile}"
+  try_cmd_for 180s 5 "ssh_cmd 'exit'"
 
   validate $?
+  echo "Logged in via ssh"
 }
 
 
