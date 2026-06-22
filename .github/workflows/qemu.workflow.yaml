@@ -12,14 +12,12 @@ jobs:
         timeout-minutes: 120
         steps:
           - uses: actions/checkout@v2
-          - name: Checkout submodules
-            run: git submodule update --init --recursive
           - name: Build image
-            run: ./test/validate.sh build
+            run: ./tests/validate.sh build
           - name: Start image
-            run: ./test/validate.sh start
+            run: ./tests/validate.sh start
           - name: Stop image
-            run: ./test/validate.sh stop
+            run: ./tests/validate.sh stop
           - name: Cleanup
             if: always()
             run: |
