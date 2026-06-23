@@ -6,17 +6,26 @@ CC ?= $(CROSS_COMPILE)gcc
 LDFLAGS ?= #-pthread -lrt
 CFLAGS  ?= -g -Wall -Werror
 
+# Folder definitions
+OUTPUT_PATH ?= ../build
+
 # Default target
 all: mqtt-subscriber
 
-mqtt-subscriber: paho-mqtt-c paho-mqtt-cpp
+folders:
+	mkdir -p $(OUTPUT_PATH)
+	mkdir -p $(OUTPUT_PATH)/bin
+	mkdir -p $(OUTPUT_PATH)/lib
+
+mqtt-subscriber: folders paho-mqtt-c paho-mqtt-cpp
 	$(CC) $(CFLAGS) -c -o mqtt_subscriber.o mqtt_subscriber.cpp $(LDFLAGS)
-	$(CC) $(CFLAGS) -o mqtt_subscriber mqtt_subscriber.o $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $(OUTPUT_PATH)/bin/mqtt_subscriber mqtt_subscriber.o $(LDFLAGS)
 
-paho-mqtt-c:
+paho-mqtt-c: folders
 
-paho-mqtt-cpp:
+paho-mqtt-cpp: folders paho-mqtt-c
 
 # Clean target
 clean:
-	rm -f mqtt_subscriber *.o
+	rm -f *.o
+	rm -rf $(OUTPUT_PATH)
