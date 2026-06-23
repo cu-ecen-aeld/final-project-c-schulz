@@ -165,6 +165,7 @@ endif
 # delete buildroot configuration
 clean-config: reset-wifi
 	rm -f $(BUILDROOT_CONFIG)
+	rm -f $(DEFCONFIG_CONFIG)
 
 # cleanup buildroot build
 clean: clean-config

@@ -8,7 +8,11 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
 
 1. Clone repository:
     ```
-    git@github.com:cu-ecen-aeld/final-project-c-schulz.git
+    git clone git@github.com:cu-ecen-aeld/final-project-c-schulz.git
+    ```
+    or
+    ```
+    git clone https://github.com/cu-ecen-aeld/final-project-c-schulz.git
     ```
 
 2. Install buildroot dependencies listed [here](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory).

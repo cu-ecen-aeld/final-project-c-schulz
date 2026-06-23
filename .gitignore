@@ -1,2 +1,9 @@
-actions-runner/
+# Temporary file to store the currently utilised build configuration
 .config
+
+# GitHub action runner
+actions-runner/
+
+# Compile output
+*.o
+mqtt_subscriber
