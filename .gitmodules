@@ -4,3 +4,9 @@
 [submodule "buildroot-externals"]
 	path = buildroot-externals
 	url = https://github.com/sirsipe/buildroot-externals.git
+[submodule "mqtt-event-logger/package/mqtt-subscriber/src/paho.mqtt.c"]
+	path = mqtt-event-logger/package/mqtt-subscriber/src/paho.mqtt.c
+	url = https://github.com/eclipse/paho.mqtt.c.git
+[submodule "mqtt-event-logger/package/mqtt-subscriber/src/paho.mqtt.cpp"]
+	path = mqtt-event-logger/package/mqtt-subscriber/src/paho.mqtt.cpp
+	url = https://github.com/eclipse/paho.mqtt.cpp
