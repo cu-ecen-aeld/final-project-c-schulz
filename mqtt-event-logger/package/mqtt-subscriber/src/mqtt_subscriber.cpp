@@ -1,6 +1,11 @@
-#include <syslog.h>
-#include <csignal>
-#include <atomic>
+#include <syslog.h>     // syslog
+#include <csignal>      // std::signal, SIGTERM/SIGINT
+#include <atomic>       // std::atomic
+#include <sys/stat.h>   // umask
+#include <fcntl.h>      // open, O_RDWR
+#include <chrono>       // sleep_for
+using namespace std::chrono_literals;
+
 #include "mqtt/async_client.h"
 
 // mqtt settings
@@ -148,6 +153,62 @@ extern "C" void signal_handler(int signum) {
     STOP_SIGNAL.store(signum);
 }
 
+// function to create a deamon
+bool fork_off_daemon(void)
+{
+    // actually fork off
+    pid_t pid = fork();
+    if (pid < 0)
+    {
+        syslog(LOG_ERR, "Error in fork(): %d", errno);
+        return false;
+    }
+    else if (pid > 0)
+    {
+        // this is the parent
+        // we want to exit the process here directly, child handles everything
+        syslog(LOG_INFO, "Successfully started daemon. Exit parent process.");
+        exit(EXIT_SUCCESS);
+    }
+    else
+    {
+        // this is the child
+        // start new session
+        int rc = setsid();
+        if (rc < 0)
+        {
+            syslog(LOG_ERR, "Error in setsid(): %d", errno);
+            return false;
+        }
+
+        // set new file permissions
+        umask(0);
+
+        // change to root directory
+        rc = chdir("/");
+        if (rc != 0)
+        {
+            syslog(LOG_ERR, "Error in chdir(): %d", errno);
+            return false;
+        }
+
+        // redirect stdin, stdout and stderr to /dev/null
+        int devnull_fd = open("/dev/null", O_RDWR);
+        if (devnull_fd < 0)
+        {
+            syslog(LOG_ERR, "Error opening /dev/null: %d", errno);
+            return false;
+        }
+        dup2(devnull_fd, STDIN_FILENO);
+        dup2(devnull_fd, STDOUT_FILENO);
+        dup2(devnull_fd, STDERR_FILENO);
+        close(devnull_fd);
+
+        // exit function to continue with the mqtt stuff
+        return true;
+    }
+}
+
 // main function
 int main(int argc, char* argv[])
 {
@@ -163,62 +224,73 @@ int main(int argc, char* argv[])
     bool daemon_mode           = false;
 
     // parse command line arguments
+    bool parse_error = false;
     for (int i=1; i<argc; ++i) {
         if (std::string(argv[i]) == "-d")
             daemon_mode = true;
         else if (std::string(argv[i]) == "-h") {
-            if (i < argc-1)
-                mqtt_host = argv[i+1];
-            else {
-                syslog(LOG_ERR, "Error parsing command line arguments. Usage: %s", usage.c_str());
-                return 1;
+            if (i >= argc-1) {
+                parse_error = true;
+                break;
             }
+            mqtt_host = argv[i+1];
         }
         else if (std::string(argv[i]) == "-t") {
-            if (i < argc-1)
-                mqtt_topic = argv[i+1];
-            else {
-                syslog(LOG_ERR, "Error parsing command line arguments. Usage: %s", usage.c_str());
-                return 1;
+            if (i >= argc-1) {
+                parse_error = true;
+                break;
             }
+            mqtt_topic = argv[i+1];
         }
     }
 
-    // print daemon mode
-    if (daemon_mode)
-        syslog(LOG_INFO, "Starting in daemon mode...");
+    // if command line arguments could not be parsed, abort
+    if (parse_error) {
+        syslog(LOG_ERR, "Error parsing command line arguments. Usage: %s", usage.c_str());
+        return EXIT_FAILURE;
+    }
 
     // setup signal handler
     std::signal(SIGTERM, &signal_handler);
     std::signal(SIGINT,  &signal_handler);
+
+    // print daemon mode
+    if (daemon_mode) {
+        syslog(LOG_INFO, "Starting in daemon mode...");
+        if (!fork_off_daemon()) {
+            syslog(LOG_ERR, "Error starting in daemon mode.");
+            return EXIT_FAILURE;
+        }
+    }
 
     // create mqtt client
     MQTTClient mqtt_client(mqtt_host, mqtt_client_id, mqtt_topic);
 
     // connect the mqtt client
     if (!mqtt_client.connect())
-        return 1;
+        return EXIT_FAILURE;
 
     // block until user quits
-    while (STOP_SIGNAL == -1);
+    while (STOP_SIGNAL == -1)
+        std::this_thread::sleep_for(50ms);
 
     // print termination reason
     switch (STOP_SIGNAL) {
         case SIGTERM:
-            syslog(LOG_DEBUG, "Terminated by SIGTERM.");
+            syslog(LOG_INFO, "Terminated by SIGTERM.");
             break;
         case SIGINT:
-            syslog(LOG_DEBUG, "Terminated by SIGINT.");
+            syslog(LOG_INFO, "Terminated by SIGINT.");
             break;
         default:
-            syslog(LOG_DEBUG, "Terminated by unknown.");
+            syslog(LOG_INFO, "Terminated by unknown.");
     }
 
     // disconnect the mqtt client
     if (!mqtt_client.disconnect())
-        return 1;
+        return EXIT_FAILURE;
 
     closelog();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
