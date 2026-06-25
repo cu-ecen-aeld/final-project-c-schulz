@@ -1,5 +1,6 @@
-
 #include <syslog.h>
+#include <csignal>
+#include <atomic>
 #include "mqtt/async_client.h"
 
 // mqtt settings
@@ -141,6 +142,12 @@ public:
     void delivery_complete(mqtt::delivery_token_ptr token) override {}
 };
 
+// signal handler, needs 'extern "C"' according to standard
+std::atomic<int> STOP_SIGNAL = -1;
+extern "C" void signal_handler(int signum) {
+    STOP_SIGNAL.store(signum);
+}
+
 // main function
 int main(int argc, char* argv[])
 {
@@ -177,8 +184,13 @@ int main(int argc, char* argv[])
         }
     }
 
+    // print daemon mode
     if (daemon_mode)
         syslog(LOG_INFO, "Starting in daemon mode...");
+
+    // setup signal handler
+    std::signal(SIGTERM, &signal_handler);
+    std::signal(SIGINT,  &signal_handler);
 
     // create mqtt client
     MQTTClient mqtt_client(mqtt_host, mqtt_client_id, mqtt_topic);
@@ -188,7 +200,19 @@ int main(int argc, char* argv[])
         return 1;
 
     // block until user quits
-    while (std::tolower(std::cin.get()) != 'q');
+    while (STOP_SIGNAL == -1);
+
+    // print termination reason
+    switch (STOP_SIGNAL) {
+        case SIGTERM:
+            syslog(LOG_DEBUG, "Terminated by SIGTERM.");
+            break;
+        case SIGINT:
+            syslog(LOG_DEBUG, "Terminated by SIGINT.");
+            break;
+        default:
+            syslog(LOG_DEBUG, "Terminated by unknown.");
+    }
 
     // disconnect the mqtt client
     if (!mqtt_client.disconnect())
