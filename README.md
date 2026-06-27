@@ -98,12 +98,12 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
 
 5. Run own tests:
 
-    1. Publish message on any topic:
+    * Publish message on any topic:
         ```
         mqtt pub -t test -m '{"text": "HI!"}'
         ```
 
-    2. Observe message being logged to `/tmp/mqttlog`:
+    * Observe message being logged to `/tmp/mqttlog`:
         ```
         cat /tmp/mqttlog
         ```
@@ -115,7 +115,7 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
         }
         ```
 
-    3. Observe syslog output in `/var/log/syslog`:
+    * Observe syslog output in `/var/log/syslog`:
         ```
         tail /var/log/syslog | grep mqtt_subscriber
         ```

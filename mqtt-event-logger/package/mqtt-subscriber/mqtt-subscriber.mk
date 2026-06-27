@@ -24,7 +24,7 @@ endef
 
 # define install commands
 define MQTT_SUBSCRIBER_INSTALL_TARGET_CMDS
-	$(MAKE) install INSTALL_CMD=$(INSTALL) BUILD_DIR=. TARGET_DIR=$(TARGET_DIR)/usr
+	$(TARGET_MAKE_ENV) $(MAKE) install INSTALL_CMD=$(INSTALL) BUILD_DIR=. TARGET_DIR=$(TARGET_DIR)/usr
 endef
 
 $(eval $(generic-package))
