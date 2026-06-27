@@ -4,7 +4,7 @@
 ## Project Overview
 Please see the [Project Overview page](../../wiki/Project-Overview).
 
-## Build and install steps
+## Build and install buildroot image
 
 1. Clone repository:
     ```
@@ -33,7 +33,7 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
     sudo make install MQTT_TARGET_DEVICE=<your-device>
     ```
 
-## Setup test environment
+## Setup test environment on host
 
 1. Install MQTT broker:
     ```
