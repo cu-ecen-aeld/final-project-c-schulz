@@ -1,0 +1,22 @@
+name: mqtt-test
+on:
+    push:
+        tags-ignore:
+            - '*'
+        branches:
+            - '*'
+jobs:
+    pub-sub-test:
+#        container: cuaesd/aesd-autotest:24-assignment7-buildroot
+        runs-on: self-hosted
+        timeout-minutes: 120
+        steps:
+          - uses: actions/checkout@v2
+          - name: Build mqtt subscriber
+            run: ./tests/validate_mqtt.sh build
+          - name: Run publish-subscribe test
+            run: ./tests/validate_mqtt.sh pub-sub
+          - name: Cleanup
+            if: always()
+            run: |
+              ssh-add -D
