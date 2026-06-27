@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TEST_DIR=$(dirname ${BASH_SOURCE[0]})
-REPO_DIR=$(dirname ${TEST_DIR})
+REPO_DIR=${TEST_DIR}/..
 
 # define different colors
 # See https://stackoverflow.com/questions/5947742/how-to-change-the-output-color-of-echo-in-linux

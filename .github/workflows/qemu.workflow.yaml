@@ -13,13 +13,13 @@ jobs:
         steps:
           - uses: actions/checkout@v2
           - name: Build image
-            run: ./tests/validate.sh build
+            run: ./tests/validate_qemu.sh build
           - name: Start image
-            run: ./tests/validate.sh start
+            run: ./tests/validate_qemu.sh start
           - name: Test ssh access
-            run: ./tests/validate.sh ssh
+            run: ./tests/validate_qemu.sh ssh
           - name: Stop image
-            run: ./tests/validate.sh stop
+            run: ./tests/validate_qemu.sh stop
           - name: Cleanup
             if: always()
             run: |
