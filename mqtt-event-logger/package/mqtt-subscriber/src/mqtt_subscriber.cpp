@@ -4,23 +4,36 @@
 #include <sys/stat.h>   // umask
 #include <fcntl.h>      // open, O_RDWR
 #include <chrono>       // sleep_for
-using namespace std::chrono_literals;
+#include <mutex>        // std::mutex
 
 #include "mqtt/async_client.h"
+
+using namespace std::chrono_literals;
 
 // mqtt settings
 const std::string MQTT_CLIENT_ID{"mqtt-event-logger"};
 const std::string MQTT_DEFAULT_HOST{"mqtt://localhost:1883"};
 const std::string MQTT_DEFAULT_TOPIC{"#"};
+const std::string MQTT_DEFAULT_FILE{"/tmp/mqttlog"};
 
 const int MQTT_QOS = 1;
 const int MQTT_RETRY_ATTEMPTS = 5;
 
+const std::string MQTT_JSON_TEMPLATE{
+R"({
+    "topic": "%topic%",
+    "payload": %payload%
+}
+)"};
 
 class MQTTListener : public virtual mqtt::iaction_listener
 {
     std::string name_;
 
+public:
+    MQTTListener(const std::string& name) : name_{name} {}
+
+private:
     void on_failure(const mqtt::token& tok) override
     {
         std::string msg{""};
@@ -42,11 +55,9 @@ class MQTTListener : public virtual mqtt::iaction_listener
                 msg += "'" + t + "', ";
         }
 
+        // log success and message content
         syslog(LOG_DEBUG, "Success of listener '%s'%s", name_.c_str(), msg.c_str());
     }
-
-public:
-    MQTTListener(const std::string& name) : name_(name) {}
 };
 
 class MQTTClient : public virtual mqtt::callback, public virtual mqtt::iaction_listener
@@ -58,13 +69,20 @@ class MQTTClient : public virtual mqtt::callback, public virtual mqtt::iaction_l
     std::string topic_;
     int nretry_;
 
+    std::string filename_;
+    std::mutex fileMutex_;
+
 public:
-    MQTTClient(const std::string& mqtt_host, const std::string& mqtt_client_id, const std::string& mqtt_topic) :
+    MQTTClient(const std::string& mqtt_host,
+               const std::string& mqtt_client_id,
+               const std::string& mqtt_topic,
+               const std::string& output_file) :
         client_{mqtt_host, mqtt_client_id},
         connOpts_{},
-        listener_{"MQTT Subscriber"},
+        listener_{mqtt_client_id},
         topic_{mqtt_topic},
-        nretry_{0}
+        nretry_{0},
+        filename_{output_file}
     {
         syslog(LOG_INFO, "Instantiating MQTT client connecting to MQTT server at '%s' with id '%s'.", mqtt_host.c_str(), mqtt_client_id.c_str());
         connOpts_.set_clean_session(false);
@@ -100,6 +118,7 @@ public:
         return true;
     }
 
+private:
     // reconnect the mqtt client
     void reconnect()
     {
@@ -140,11 +159,52 @@ public:
     // message arrived callback
     void message_arrived(mqtt::const_message_ptr msg) override
     {
+        // log message and write content to file
         syslog(LOG_INFO, "Message arrived. Topic: '%s'. Payload: '%s'", msg->get_topic().c_str(), msg->to_string().c_str());
+        write_to_file(msg);
     }
 
     // delivery complete callback
     void delivery_complete(mqtt::delivery_token_ptr token) override {}
+
+    // write received message to file
+    void write_to_file(mqtt::const_message_ptr msg)
+    {
+        // lock mutex to protect file access
+        // only allow one access at a time, lock will be released at end of scope
+        std::lock_guard<std::mutex> lock(fileMutex_);
+
+        // open file, change flags if it is a /dev/ device
+        int fileDescriptor;
+        if (filename_.find("/dev/") == 0)
+            fileDescriptor = open(filename_.c_str(), O_RDWR);
+        else
+            fileDescriptor = open(filename_.c_str(), O_RDWR | O_CREAT | O_APPEND | O_CLOEXEC, S_IRWXU | S_IRWXG | S_IRWXO);
+
+        // log error and return to caller
+        if (fileDescriptor < 0) {
+            syslog(LOG_ERR, "Can't open file '%s' for writing.", filename_.c_str());
+            return;
+        }
+
+        // convert message to json object
+        auto replace = [](std::string& str, const std::string& from, const std::string& to) {
+            if (size_t start = str.find(from); start != std::string::npos)
+                str.replace(start, from.length(), to);
+        };
+        std::string json = MQTT_JSON_TEMPLATE;
+        replace(json, "\%topic\%",   msg->get_topic());
+        replace(json, "\%payload\%", msg->to_string());
+
+        // write to file
+        int sz = write(fileDescriptor, json.c_str(), json.size());
+        if (sz < static_cast<int>(json.size()))
+            syslog(LOG_DEBUG, "Error writing to file '%s': %d", filename_.c_str(), errno);
+
+        // close file
+        if (fileDescriptor > 0)
+            close(fileDescriptor);
+    }
 };
 
 // signal handler, needs 'extern "C"' according to standard
@@ -212,7 +272,7 @@ bool fork_off_daemon(void)
 // main function
 int main(int argc, char* argv[])
 {
-    const std::string usage = "mqtt_subscriber -h <host> -t <topic> -d";
+    const std::string usage = "mqtt_subscriber -h <host> -t <topic> -f <file> -d";
 
     // open syslog
     openlog(NULL, 0, LOG_USER);
@@ -221,6 +281,7 @@ int main(int argc, char* argv[])
     std::string mqtt_client_id = MQTT_CLIENT_ID;
     std::string mqtt_host      = MQTT_DEFAULT_HOST;
     std::string mqtt_topic     = MQTT_DEFAULT_TOPIC;
+    std::string output_file    = MQTT_DEFAULT_FILE;
     bool daemon_mode           = false;
 
     // parse command line arguments
@@ -241,6 +302,13 @@ int main(int argc, char* argv[])
                 break;
             }
             mqtt_topic = argv[i+1];
+        }
+        else if (std::string(argv[i]) == "-f") {
+            if (i >= argc-1) {
+                parse_error = true;
+                break;
+            }
+            output_file = argv[i+1];
         }
     }
 
@@ -264,7 +332,7 @@ int main(int argc, char* argv[])
     }
 
     // create mqtt client
-    MQTTClient mqtt_client(mqtt_host, mqtt_client_id, mqtt_topic);
+    MQTTClient mqtt_client(mqtt_host, mqtt_client_id, mqtt_topic, output_file);
 
     // connect the mqtt client
     if (!mqtt_client.connect())
