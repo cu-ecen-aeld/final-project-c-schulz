@@ -85,18 +85,35 @@ build_mqtt_subscriber(){
   print $GREEN "Built mqtt subscriber"
 }
 
+# start mqtt subscriber
+start_mqtt_subscriber(){
+  print $YELLOW "Start mqtt subscriber"
+  pushd $BIN_DIR
+
+  ./mqtt_subscriber -d -f $MQTT_LOGFILE
+  validate $?
+
+  popd
+  print $GREEN "Started mqtt subscriber"
+}
+
+# stop mqtt subscriber
+stop_mqtt_subscriber(){
+  print $YELLOW "Stop mqtt subscriber"
+
+  PID=$(pgrep -fa "./mqtt_subscriber -d -f $MQTT_LOGFILE" | awk {'print $1'})
+  kill -SIGINT $PID
+  validate $?
+
+  print $GREEN "Stopped mqtt subscriber"
+}
+
 # run publish-subscribe test on mqtt subscriber
 run_publish_subscribe_test(){
   print $YELLOW "Run publish-subscribe test"
-  pushd $BIN_DIR
 
   JSON1='{"text": "HI!"}'
   JSON2='{"text": "BYE!"}'
-
-  # start mqtt subscriber
-  print $NC "Starting mqtt subscriber..."
-  ./mqtt_subscriber -d -f $MQTT_LOGFILE
-  validate $?
 
   # publish first test message
   print $NC "Publishing first message..."
@@ -134,12 +151,6 @@ run_publish_subscribe_test(){
 }'
   validate_content $MQTT_LOGFILE "$JSON12"
 
-  # terminate mqtt subscriber
-  print $NC "Stopping mqtt subscriber..."
-  PID=$(pgrep -fa "./mqtt_subscriber -d -f $MQTT_LOGFILE" | awk {'print $1'})
-  kill -SIGINT $PID
-  validate $?
-
   # remove logfile
   rm -f $MQTT_LOGFILE
 
@@ -155,11 +166,17 @@ case "$1" in
   build)
     build_mqtt_subscriber
     ;;
+  start)
+    start_mqtt_subscriber
+    ;;
+  stop)
+    stop_mqtt_subscriber
+    ;;
   pub-sub)
     run_publish_subscribe_test
     ;;
   *)
-    echo "Usage: $0 {build|pub-sub}"
+    echo "Usage: $0 {build|start|stop|pub-sub}"
     exit 1
     ;;
 esac

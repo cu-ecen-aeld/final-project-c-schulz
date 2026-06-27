@@ -14,8 +14,12 @@ jobs:
           - uses: actions/checkout@v2
           - name: Build mqtt subscriber
             run: ./tests/validate_mqtt.sh build
+          - name: Start mqtt subscriber
+            run: ./tests/validate_mqtt.sh start
           - name: Run publish-subscribe test
             run: ./tests/validate_mqtt.sh pub-sub
+          - name: Stop mqtt subscriber
+            run: ./tests/validate_mqtt.sh stop
           - name: Cleanup
             if: always()
             run: |
