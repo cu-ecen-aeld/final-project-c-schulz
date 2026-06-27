@@ -76,50 +76,55 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
 
 ## Build and test mqtt subscriber
 
-1. Build mqtt subscriber:
+1. Install dependencies:
+    ```
+    sudo apt install libssl-dev
+    ```
+
+2. Build mqtt subscriber:
     ```
     ./tests/validate_mqtt.sh build
     ```
 
-2. Start mqtt subscriber:
+3. Start mqtt subscriber:
     ```
     ./tests/validate_mqtt.sh start
     ```
 
-3. Run pre-defined mqtt subscriber test:
+4. Run pre-defined mqtt subscriber test:
     ```
     ./tests/validate_mqtt.sh pub-sub
     ```
 
-4. Run own tests:
+5. Run own tests:
 
-    4.1 Publish message on any topic:
-    ```
-    mqtt pub -t test -m '{"text": "HI!"}'
-    ```
+    1. Publish message on any topic:
+        ```
+        mqtt pub -t test -m '{"text": "HI!"}'
+        ```
 
-    4.2 Observe message being logged to `/tmp/mqttlog`:
-    ```
-    cat /tmp/mqttlog
-    ```
-    yields e.g.:
-    ```
-    {
-        "topic": "test",
-        "payload": {"text": "HI!"}
-    }
-    ```
+    2. Observe message being logged to `/tmp/mqttlog`:
+        ```
+        cat /tmp/mqttlog
+        ```
+        yields e.g.:
+        ```
+        {
+            "topic": "test",
+            "payload": {"text": "HI!"}
+        }
+        ```
 
-    4.3 Observe syslog output in `/var/log/syslog`:
-    ```
-    tail /var/log/syslog | grep mqtt_subscriber
-    ```
-    yields e.g.
-    ```
-    2026-06-27T15:54:53.150915+02:00 Buckbeak mqtt_subscriber: Message arrived. Topic: 'test'. Payload: '{"text": "HI!"}'
-    ```
+    3. Observe syslog output in `/var/log/syslog`:
+        ```
+        tail /var/log/syslog | grep mqtt_subscriber
+        ```
+        yields e.g.
+        ```
+        2026-06-27T15:54:53.150915+02:00 Buckbeak mqtt_subscriber: Message arrived. Topic: 'test'. Payload: '{"text": "HI!"}'
+        ```
 
-5. Stop mqtt subscriber:
+6. Stop mqtt subscriber:
     ```
     ./tests/validate_mqtt.sh stop
     ```
