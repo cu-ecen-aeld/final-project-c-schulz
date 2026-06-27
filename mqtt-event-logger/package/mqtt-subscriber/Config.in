@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MQTT_SUBSCRIBER
+	bool "mqtt-subscriber"
+	help
+	  Includes the MQTT subscriber executable and start scripts in the buildroot image.
+	  Used to subscribe to an MQTT broker and log events (later forward them to a char device driver).
