@@ -7,6 +7,8 @@ BUILD_DIR = ../build
 #BUILD_DIR=$(shell realpath ../build)
 TARGET_DIR = ../install
 INSTALL_CMD = install
+CMAKE_BUILD_OPTIONS =
+
 
 # linker and compile options
 LDFLAGS ?= -lpaho-mqttpp3 -lpaho-mqtt3as -Wl,-rpath,"\$$ORIGIN/../lib"
@@ -19,6 +21,7 @@ all: build
 echo:
 	@echo "Build directory:   " $(BUILD_DIR)
 	@echo "Install directory: " $(TARGET_DIR)
+	@echo "CMake options:     " $(CMAKE_BUILD_OPTIONS)
 	@echo "Install command:   " $(INSTALL_CMD)
 
 # create build folders
@@ -46,16 +49,16 @@ build: build-folders paho-mqtt-c paho-mqtt-cpp
 # install mqtt subscriber
 install:
 	@echo "Installing mqtt-subscriber to '$(TARGET_DIR)'..."
-	$(INSTALL_CMD) -d 0755 $(TARGET_DIR)/bin/
+	$(INSTALL_CMD) -d -m 0755 $(TARGET_DIR)/bin/
 	$(INSTALL_CMD) -m 0755 $(BUILD_DIR)/bin/mqtt_subscriber $(TARGET_DIR)/bin/
-	$(INSTALL_CMD) -d 0755 $(TARGET_DIR)/lib/
+	$(INSTALL_CMD) -d -m 0755 $(TARGET_DIR)/lib/
 	$(INSTALL_CMD) -m 0755 $(BUILD_DIR)/lib/libpaho-mqttpp3.so.1.6.0 $(TARGET_DIR)/lib/
 	ln -fsvr $(TARGET_DIR)/lib/libpaho-mqttpp3.so.1.6.0 $(TARGET_DIR)/lib/libpaho-mqttpp3.so.1
 	ln -fsvr $(TARGET_DIR)/lib/libpaho-mqttpp3.so.1 $(TARGET_DIR)/lib/libpaho-mqttpp3.so
 	$(INSTALL_CMD) -m 0755 $(BUILD_DIR)/lib/libpaho-mqtt3as.so.1.3.16 $(TARGET_DIR)/lib/
 	ln -fsvr $(TARGET_DIR)/lib/libpaho-mqtt3as.so.1.3.16 $(TARGET_DIR)/lib/libpaho-mqtt3as.so.1
 	ln -fsvr $(TARGET_DIR)/lib/libpaho-mqtt3as.so.1 $(TARGET_DIR)/lib/libpaho-mqtt3as.so
-	@echo "Installed mqtt-subscirber."
+	@echo "Installed mqtt-subscriber."
 
 ##############################################################
 
@@ -117,5 +120,8 @@ clean-paho-mqtt-cpp:
 # cleanup build
 clean: clean-paho-mqtt-c clean-paho-mqtt-cpp
 	rm -f *.o
+
+# also cleanup build and install dir
+clean-all: clean
 	rm -rf $(BUILD_DIR)
 	rm -rf $(TARGET_DIR)

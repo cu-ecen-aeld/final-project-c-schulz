@@ -6,5 +6,5 @@ actions-runner/
 
 # Compile output
 build/
+install/
 *.o
-mqtt_subscriber
