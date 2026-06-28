@@ -14,13 +14,22 @@ build_image(){
   print $YELLOW "Build buildroot image with qemu config"
   pushd $REPO_DIR
 
-  # clean config to make sure the versionized config is used
-  make clean-config QEMU_BUILD=true
-  validate $?
+  # check if config has changed since last build
+  QEMU_CONFIG="mqtt-event-logger/configs/mqtt_qemu_defconfig"
+  QEMU_BUILD_CONFIG="QEMU_BUILD=true"
+  if [ ! -f ${QEMU_CONFIG}.sha1 ] || ! sha1sum -c ${QEMU_CONFIG}.sha1 ; then
+
+    # make clean build to make sure the versionized config is used
+    make clean ${QEMU_BUILD_CONFIG}
+    validate $?
+  fi
 
   # compile buildroot image
-  make QEMU_BUILD=true
+  make ${QEMU_BUILD_CONFIG}
   validate $?
+
+  # update sha1
+  sha1sum ${QEMU_CONFIG} > ${QEMU_CONFIG}.sha1
 
   popd
   print $GREEN "Built buildroot image with qemu config"

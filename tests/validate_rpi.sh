@@ -20,13 +20,22 @@ build_image(){
     git clone https://gitlab.com/buildroot.org/buildroot -b 2026.05 buildroot_rpi
   fi
 
-  # clean config to make sure the versionized config is used
-  make clean-config QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi WIFI_SSID=XYZ WIFI_PWD=123456789
-  validate $?
+  # check if config has changed since last build
+  RPI_CONFIG="mqtt-event-logger/configs/mqtt_rpi_defconfig"
+  RPI_BUILD_CONFIG="QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi WIFI_SSID=XYZ WIFI_PWD=123456789"
+  if [ ! -f ${RPI_CONFIG}.sha1 ] || ! sha1sum -c ${RPI_CONFIG}.sha1 ; then
+
+    # make clean build to make sure the versionized config is used
+    make clean ${RPI_BUILD_CONFIG}
+    validate $?
+  fi
 
   # compile buildroot image
-  make QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi WIFI_SSID=XYZ WIFI_PWD=123456789
+  make ${RPI_BUILD_CONFIG}
   validate $?
+
+  # update sha1
+  sha1sum ${RPI_CONFIG} > ${RPI_CONFIG}.sha1
 
   popd
   print $GREEN "Built buildroot image with rpi config"

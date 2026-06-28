@@ -67,8 +67,10 @@ all: build
 
 # print main build parameters
 echo:
-	@echo QEMU_BUILD: $(QEMU_BUILD)
-	@echo DEFCONFIG: $(MODIFIED_DEFCONFIG)
+	@echo "QEMU_BUILD:    $(QEMU_BUILD)"
+	@echo "DEFCONFIG:     $(MODIFIED_DEFCONFIG)"
+	@echo "BUILDROOT_DIR: $(BUILDROOT_DIR)"
+
 
 # update all submodules
 submodule:
