@@ -16,14 +16,8 @@ build_image(){
 
   # create second buildroot folder for rpi build
   if [ ! -d buildroot_rpi ]; then
-    print $YELLOW "Updating submodules"
-    make submodule
-
-    print $YELLOW "Copying buildroot folder to buildroot_rpi"
-    cp -r buildroot buildroot_rpi
-
-    print $YELLOW "Cleaning buildroot_rpi"
-    make clean QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi
+    print $YELLOW "Checkout buildroot into buildroot_rpi folder"
+    git clone https://gitlab.com/buildroot.org/buildroot -b 2026.05 buildroot_rpi
   fi
 
   # compile buildroot image
