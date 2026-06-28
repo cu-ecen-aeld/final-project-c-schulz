@@ -20,7 +20,15 @@ build_image(){
   # make clean
   # validate $?
 
-  make QEMU_BUILD=false
+  # create second buildroot folder for rpi build
+  if [ ! d buildroot_rpi ]; then
+    make submodule
+    cp -r buildroot buildroot_rpi
+    make clean QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi
+  fi
+
+  # compile buildroot image
+  make QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi
   validate $?
 
   popd
@@ -37,7 +45,7 @@ case "$1" in
     build_image
     ;;
   *)
-    echo "Usage: $0 {build}"
+    echo "Usage: $0 {build"
     exit 1
     ;;
 esac
