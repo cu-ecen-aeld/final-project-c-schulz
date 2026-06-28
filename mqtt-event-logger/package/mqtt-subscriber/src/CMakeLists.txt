@@ -11,6 +11,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# Update RPATH for the installation step
+# This tells the installed binary to look for its shared libraries in a "lib"
+# folder right next to where the binary is installed (relative pathing).
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
+
 
 # ==============================================================================
 # 1. Configure and Build Paho MQTT C Submodule
@@ -26,7 +32,8 @@ set(PAHO_ENABLE_CPACK        OFF CACHE BOOL "Enable CPack"           FORCE)
 set(PAHO_WITH_SSL            ON  CACHE BOOL "Enable SSL/TLS support" FORCE)
 
 # Add folder path to paho.mqtt.c submodule directory
-add_subdirectory(paho.mqtt.c)
+# EXCLUDE_FROM_ALL completely turns off internal install tasks
+add_subdirectory(paho.mqtt.c EXCLUDE_FROM_ALL)
 
 # Create namespace aliases that paho.mqtt.cpp searches for internally
 add_library(eclipse-paho-mqtt-c::paho-mqtt3a  ALIAS paho-mqtt3a)
@@ -48,7 +55,7 @@ file(WRITE "${FAKE_CONFIG_DIR}/eclipse-paho-mqtt-cConfig.cmake" "
     set(eclipse-paho-mqtt-c_VERSION \"1.3.16\")
     set(PAHO_MQTT_C_INCLUDE_DIRS    \"${CMAKE_CURRENT_SOURCE_DIR}/paho.mqtt.c/src\")
     # Falls das C++-Skript alte Variablen nutzt, stellen wir diese bereit:
-    set(PAHO_MQTT_C_LIBRARIES       paho-mqtt3a paho-mqtt3c paho-mqtt3as paho-mqtt3cs) 
+    set(PAHO_MQTT_C_LIBRARIES       paho-mqtt3as)
 ")
 
 file(WRITE "${FAKE_CONFIG_DIR}/eclipse-paho-mqtt-cConfigVersion.cmake" "
@@ -67,7 +74,7 @@ list(APPEND CMAKE_PREFIX_PATH "${FAKE_CONFIG_DIR}")
 # Modern Paho C++ includes an installer script that demands the underlying C 
 # dependency be part of its designated export target group ("PahoMqttCpp").
 # We register our local C target here so that CMake's validation succeeds.
-install(TARGETS paho-mqtt3a paho-mqtt3c paho-mqtt3as paho-mqtt3cs EXPORT PahoMqttCpp)
+install(TARGETS paho-mqtt3as EXPORT PahoMqttCpp)
 
 
 # ==============================================================================
@@ -83,7 +90,8 @@ set(PAHO_BUILD_DOCUMENTATION OFF CACHE BOOL "Build documentation"    FORCE)
 set(PAHO_WITH_MQTT_C         OFF CACHE BOOL "Build internal Paho C"  FORCE)
 
 # Add folder path to paho.mqtt.c submodule directory
-add_subdirectory(paho.mqtt.cpp)
+# EXCLUDE_FROM_ALL completely turns off internal install tasks
+add_subdirectory(paho.mqtt.cpp EXCLUDE_FROM_ALL)
 
 
 # ==============================================================================
@@ -105,3 +113,25 @@ target_include_directories(mqtt_subscriber PRIVATE
 # Link mqtt subscriber directly against the Paho C++ target
 # The C++ target automatically brings along the required C dependency
 target_link_libraries(mqtt_subscriber PRIVATE paho-mqttpp3-shared)
+
+
+# ==============================================================================
+# 6.  Installation Rules for Application and Submodule Dependencies
+# ==============================================================================
+# Install mqtt subscriber binary to the 'bin' folder
+install(TARGETS mqtt_subscriber
+    RUNTIME DESTINATION bin
+)
+
+# Grab ONLY the compiled shared library files from our unified output folder.
+# This uses a wildcard matching pattern to grab 'libpaho-mqtt3as.so*' and
+# 'libpaho-mqttpp3.so*' including their version symlinks, skipping headers completely.
+file(GLOB PAHO_SO_LIBS
+    "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libpaho-mqtt3as.so*"
+    "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libpaho-mqttpp3.so*"
+)
+
+# Deploy only these matched library files to the installation directory
+install(FILES ${PAHO_SO_LIBS}
+    DESTINATION lib
+)

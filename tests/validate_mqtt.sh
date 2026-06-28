@@ -4,7 +4,7 @@ TEST_DIR=$(dirname ${BASH_SOURCE[0]})
 REPO_DIR=${TEST_DIR}/..
 MQTT_SUBSCRIBER_DIR=${REPO_DIR}/mqtt-event-logger/package/mqtt-subscriber
 SRC_DIR=${MQTT_SUBSCRIBER_DIR}/src
-BIN_DIR=${MQTT_SUBSCRIBER_DIR}/src/build/bin
+BIN_DIR=${MQTT_SUBSCRIBER_DIR}/install/bin
 MQTT_LOGFILE=/tmp/mqttlog
 
 # define different colors
@@ -81,11 +81,11 @@ build_mqtt_subscriber(){
   rm -rf build
 
   # configure build
-  cmake -B build -S .
+  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=../install
   validate $?
 
   # build mqtt subscriber
-  cmake --build build
+  cmake --build build --target install
   validate $?
 
   popd
