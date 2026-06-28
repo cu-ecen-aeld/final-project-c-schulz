@@ -16,13 +16,18 @@ build_image(){
 
   # create second buildroot folder for rpi build
   if [ ! -d buildroot_rpi ]; then
+    print $YELLOW "Updating submodules"
     make submodule
+
+    print $YELLOW "Copying buildroot folder to buildroot_rpi"
     cp -r buildroot buildroot_rpi
+
+    print $YELLOW "Cleaning buildroot_rpi"
     make clean QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi
   fi
 
   # compile buildroot image
-  make QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi
+  make QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi WIFI_SSID=XYZ WIFI_PWD=123456789
   validate $?
 
   popd
@@ -39,7 +44,7 @@ case "$1" in
     build_image
     ;;
   *)
-    echo "Usage: $0 {build"
+    echo "Usage: $0 {build}"
     exit 1
     ;;
 esac
