@@ -14,14 +14,8 @@ build_image(){
   print $YELLOW "Build buildroot image with rpi config"
   pushd $REPO_DIR
 
-  # make config QEMU_BUILD=false
-  # validate $?
-
-  # make clean
-  # validate $?
-
   # create second buildroot folder for rpi build
-  if [ ! d buildroot_rpi ]; then
+  if [ ! -d buildroot_rpi ]; then
     make submodule
     cp -r buildroot buildroot_rpi
     make clean QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi
