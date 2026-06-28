@@ -7,7 +7,6 @@ on:
             - '*'
 jobs:
     pub-sub-test:
-#        container: cuaesd/aesd-autotest:24-assignment7-buildroot
         runs-on: self-hosted
         timeout-minutes: 120
         steps:

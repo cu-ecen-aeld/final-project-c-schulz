@@ -7,18 +7,17 @@ on:
             - '*'
 jobs:
     start-stop-test:
-#        container: cuaesd/aesd-autotest:24-assignment7-buildroot
         runs-on: self-hosted
         timeout-minutes: 120
         steps:
           - uses: actions/checkout@v2
-          - name: Build image
+          - name: Build qemu image
             run: ./tests/validate_qemu.sh build
-          - name: Start image
+          - name: Start qemu image
             run: ./tests/validate_qemu.sh start
           - name: Test ssh access
             run: ./tests/validate_qemu.sh ssh
-          - name: Stop image
+          - name: Stop qemu image
             run: ./tests/validate_qemu.sh stop
           - name: Cleanup
             if: always()
