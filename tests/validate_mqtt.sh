@@ -165,7 +165,6 @@ run_publish_subscribe_test(){
   # remove logfile
   rm -f $MQTT_LOGFILE
 
-  popd
   print $GREEN "Finished publish-subscribe test"
 }
 
