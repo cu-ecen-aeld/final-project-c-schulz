@@ -123,15 +123,7 @@ install(TARGETS mqtt_subscriber
     RUNTIME DESTINATION bin
 )
 
-# Grab ONLY the compiled shared library files from our unified output folder.
-# This uses a wildcard matching pattern to grab 'libpaho-mqtt3as.so*' and
-# 'libpaho-mqttpp3.so*' including their version symlinks, skipping headers completely.
-file(GLOB PAHO_SO_LIBS
-    "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libpaho-mqtt3as.so*"
-    "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libpaho-mqttpp3.so*"
-)
-
-# Deploy only these matched library files to the installation directory
-install(FILES ${PAHO_SO_LIBS}
-    DESTINATION lib
+# Install the required Paho libraries to the 'lib' folder
+install(TARGETS paho-mqtt3as paho-mqttpp3-shared
+    LIBRARY DESTINATION lib
 )

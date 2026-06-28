@@ -85,7 +85,11 @@ build_mqtt_subscriber(){
   validate $?
 
   # build mqtt subscriber
-  cmake --build build --target install
+  cmake --build build
+  validate $?
+
+  # install mqtt subscriber and deps
+  cmake --install build --strip
   validate $?
 
   popd
