@@ -20,6 +20,10 @@ build_image(){
     git clone https://gitlab.com/buildroot.org/buildroot -b 2026.05 buildroot_rpi
   fi
 
+  # clean config to make sure the versionized config is used
+  make clean-config QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi WIFI_SSID=XYZ WIFI_PWD=123456789
+  validate $?
+
   # compile buildroot image
   make QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi WIFI_SSID=XYZ WIFI_PWD=123456789
   validate $?

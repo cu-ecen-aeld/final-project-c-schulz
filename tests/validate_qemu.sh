@@ -14,6 +14,11 @@ build_image(){
   print $YELLOW "Build buildroot image with qemu config"
   pushd $REPO_DIR
 
+  # clean config to make sure the versionized config is used
+  make clean-config QEMU_BUILD=true
+  validate $?
+
+  # compile buildroot image
   make QEMU_BUILD=true
   validate $?
 
