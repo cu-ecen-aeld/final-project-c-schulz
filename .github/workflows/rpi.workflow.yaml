@@ -6,7 +6,7 @@ on:
         branches:
             - '*'
 jobs:
-    compile-test:
+    build-rpi-test:
         runs-on: self-hosted
         timeout-minutes: 120
         steps:

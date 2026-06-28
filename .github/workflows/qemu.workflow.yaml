@@ -6,7 +6,7 @@ on:
         branches:
             - '*'
 jobs:
-    start-stop-test:
+    start-stop-qemu-test:
         runs-on: self-hosted
         timeout-minutes: 120
         steps:
