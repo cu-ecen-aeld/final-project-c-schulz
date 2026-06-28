@@ -68,6 +68,13 @@ file(WRITE "${FAKE_CONFIG_DIR}/eclipse-paho-mqtt-cConfigVersion.cmake" "
 list(APPEND CMAKE_PREFIX_PATH "${FAKE_CONFIG_DIR}")
 
 
+# CROSS-COMPILE FIX: Inject directory into the Buildroot system-wide finding array
+list(APPEND CMAKE_FIND_ROOT_PATH "${FAKE_CONFIG_DIR}")
+
+# CROSS-COMPILE FIX: Forcefully override the exact path CMake looks for
+set(eclipse-paho-mqtt-c_DIR "${FAKE_CONFIG_DIR}" CACHE PATH "" FORCE)
+
+
 # ==============================================================================
 # 3. Inject Target into the Export Set
 # ==============================================================================
