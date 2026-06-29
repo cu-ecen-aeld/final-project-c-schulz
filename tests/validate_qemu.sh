@@ -17,7 +17,6 @@ build_image(){
   # check if config has changed since last build
   QEMU_CONFIG="${REPO_DIR}/mqtt-event-logger/configs/mqtt_qemu_defconfig"
   QEMU_BUILD_CONFIG="QEMU_BUILD=true"
-  sha1sum ${QEMU_CONFIG} > ${QEMU_CONFIG}.sha1  #TODO: this is bad
   if [ ! -f ${QEMU_CONFIG}.sha1 ] || ! sha1sum -c ${QEMU_CONFIG}.sha1 ; then
 
     # make clean build to make sure the versionized config is used
