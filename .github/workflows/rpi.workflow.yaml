@@ -11,5 +11,7 @@ jobs:
         timeout-minutes: 120
         steps:
           - uses: actions/checkout@v2
+            with:
+              clean: false
           - name: Build rpi image
             run: ./tests/validate_rpi.sh build
