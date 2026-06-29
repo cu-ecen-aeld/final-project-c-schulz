@@ -8,3 +8,4 @@ actions-runner/
 build/
 install/
 *.o
+*.sha1
