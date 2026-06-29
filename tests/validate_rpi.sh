@@ -23,18 +23,19 @@ build_image(){
   # check if config has changed since last build
   RPI_CONFIG="${REPO_DIR}/mqtt-event-logger/configs/mqtt_rpi_defconfig"
   RPI_BUILD_CONFIG="QEMU_BUILD=false BUILDROOT_DIR=buildroot_rpi DEFCONFIG_CONFIG=.config_rpi WIFI_SSID=XYZ WIFI_PWD=123456789"
+  sha1sum ${RPI_CONFIG} > ${RPI_CONFIG}.sha1  #TODO: this is bad
   if [ ! -f ${RPI_CONFIG}.sha1 ] || ! sha1sum -c ${RPI_CONFIG}.sha1 ; then
 
     # make clean build to make sure the versionized config is used
     print $YELLOW "Clean build because config has changed"
-    make clean ${RPI_BUILD_CONFIG}
+    #make clean ${RPI_BUILD_CONFIG}
     validate $?
   else
     print $YELLOW "Re-use old build, config has not changed"
   fi
 
   # compile buildroot image
-  make ${RPI_BUILD_CONFIG}
+  #make ${RPI_BUILD_CONFIG}
   validate $?
 
   # update sha1
