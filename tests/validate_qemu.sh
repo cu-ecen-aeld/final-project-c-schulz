@@ -21,14 +21,15 @@ build_image(){
 
     # make clean build to make sure the versionized config is used
     print $YELLOW "Clean build because config has changed"
-    #make clean ${QEMU_BUILD_CONFIG}
+    make clean ${QEMU_BUILD_CONFIG}
     validate $?
   else
     print $YELLOW "Re-use old build, config has not changed"
+    make -C buildroot mqtt-subscriber-rebuild
   fi
 
   # compile buildroot image
-  #make ${QEMU_BUILD_CONFIG}
+  make ${QEMU_BUILD_CONFIG}
   validate $?
 
   # update sha1

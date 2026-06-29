@@ -27,14 +27,15 @@ build_image(){
 
     # make clean build to make sure the versionized config is used
     print $YELLOW "Clean build because config has changed"
-    #make clean ${RPI_BUILD_CONFIG}
+    make clean ${RPI_BUILD_CONFIG}
     validate $?
   else
     print $YELLOW "Re-use old build, config has not changed"
+    make -C buildroot_rpi mqtt-subscriber-rebuild
   fi
 
   # compile buildroot image
-  #make ${RPI_BUILD_CONFIG}
+  make ${RPI_BUILD_CONFIG}
   validate $?
 
   # update sha1
