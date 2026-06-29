@@ -2,12 +2,14 @@
 
 case "$1" in
     start)
-        echo "Start mqtt subscriber"
+        printf "Starting mqtt subscriber: "
         start-stop-daemon -S -n mqtt_subscriber -a /usr/bin/mqtt_subscriber -- -d -h %HOST% -t %TOPIC% -f /tmp/mqttlog
+        [ $? = 0 ] && echo "OK" || echo "FAIL"
         ;;
     stop)
-        echo "Stop mqtt subscriber"
+        printf "Stopping mqtt subscriber: "
         start-stop-daemon -K -n mqtt_subscriber
+        [ $? = 0 ] && echo "OK" || echo "FAIL"
         ;;
     *)
         echo "Usage: $0 {start|stop}"
