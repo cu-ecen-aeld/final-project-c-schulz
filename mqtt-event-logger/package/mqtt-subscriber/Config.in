@@ -1,7 +1,23 @@
-config BR2_PACKAGE_MQTT_SUBSCRIBER
+menuconfig BR2_PACKAGE_MQTT_SUBSCRIBER
 	bool "mqtt-subscriber"
 	select BR2_TOOLCHAIN_BUILDROOT_CXX
 	select BR2_PACKAGE_OPENSSL
 	help
 	  Includes the MQTT subscriber executable and start scripts in the buildroot image.
 	  Used to subscribe to an MQTT broker and log events (later forward them to a char device driver).
+
+
+if BR2_PACKAGE_MQTT_SUBSCRIBER
+
+config BR2_CHAR_HASH
+	string
+	default "\x23"
+
+config BR2_PACKAGE_MQTT_SUBSCRIBER_MQTT_HOST
+	string "MQTT host"
+	default "mqtt://localhost:1883"
+
+config BR2_PACKAGE_MQTT_SUBSCRIBER_MQTT_TOPIC
+	string "MQTT topic"
+	default "\\$(BR2_CHAR_HASH)"
+endif

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        echo "Start mqtt subscriber"
+        start-stop-daemon -S -n mqtt_subscriber -a /usr/bin/mqtt_subscriber -- -d -h %HOST% -t %TOPIC% -f /tmp/mqttlog
+        ;;
+    stop)
+        echo "Stop mqtt subscriber"
+        start-stop-daemon -K -n mqtt_subscriber
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac
+
