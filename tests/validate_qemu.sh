@@ -20,6 +20,7 @@ build_image(){
   if [ ! -f ${QEMU_CONFIG}.sha1 ] || ! sha1sum -c ${QEMU_CONFIG}.sha1 ; then
 
     # make clean build to make sure the versionized config is used
+    print $YELLOW "Clean build because config has changed"
     make clean ${QEMU_BUILD_CONFIG}
     validate $?
   fi

@@ -26,6 +26,7 @@ build_image(){
   if [ ! -f ${RPI_CONFIG}.sha1 ] || ! sha1sum -c ${RPI_CONFIG}.sha1 ; then
 
     # make clean build to make sure the versionized config is used
+    print $YELLOW "Clean build because config has changed"
     make clean ${RPI_BUILD_CONFIG}
     validate $?
   fi
