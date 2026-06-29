@@ -68,6 +68,15 @@ login_ssh(){
   print $GREEN "Logged in via ssh"
 }
 
+# check if mqtt subscriber is running
+test_mqtt_subscriber(){
+  print $YELLOW "Verify mqtt subscriber is running"
+  ssh_cmd 'command -v /usr/bin/mqtt_subscriber'
+
+  validate $?
+  print $GREEN "Verified mqtt subscriber is running"
+}
+
 
 ############################
 ## accepted script arguments
@@ -85,8 +94,11 @@ case "$1" in
   ssh)
     login_ssh
     ;;
+  mqtt)
+    test_mqtt_subscriber
+    ;;
   *)
-    echo "Usage: $0 {build|start|stop|ssh}"
+    echo "Usage: $0 {build|start|stop|ssh|mqtt}"
     exit 1
     ;;
 esac

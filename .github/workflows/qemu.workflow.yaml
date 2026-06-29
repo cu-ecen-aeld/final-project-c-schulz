@@ -6,7 +6,7 @@ on:
         branches:
             - '*'
 jobs:
-    start-stop-qemu-test:
+    run-qemu-test:
         runs-on: self-hosted
         timeout-minutes: 120
         steps:
@@ -17,6 +17,8 @@ jobs:
             run: ./tests/validate_qemu.sh start
           - name: Test ssh access
             run: ./tests/validate_qemu.sh ssh
+          - name: Test mqtt subscriber
+            run: ./tests/validate_qemu.sh mqtt
           - name: Stop qemu image
             run: ./tests/validate_qemu.sh stop
           - name: Cleanup

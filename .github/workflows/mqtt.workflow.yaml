@@ -19,7 +19,3 @@ jobs:
             run: ./tests/validate_mqtt.sh pub-sub
           - name: Stop mqtt subscriber
             run: ./tests/validate_mqtt.sh stop
-          - name: Cleanup
-            if: always()
-            run: |
-              ssh-add -D
