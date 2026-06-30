@@ -9,29 +9,6 @@ MQTT_LOGFILE=/tmp/mqttlog
 
 source ${TEST_DIR}/validate_helpers.sh
 
-#############################
-# additional helper functions
-
-# publish string message on provided topic
-mqtt_publish(){
-  topic=$1
-  message=$2
-  mqtt pub -t $topic -m "$message" 2> /dev/null
-}
-
-validate_json(){
-  file=$1
-  python3 -m json.tool $file > /dev/null
-  validate $?
-}
-
-validate_content(){
-  file=$1
-  text=$2
-  [[ "$(cat $file)" = "$text" ]]
-  validate $?
-}
-
 
 #######################
 ## available test steps
@@ -58,6 +35,18 @@ build_mqtt_subscriber(){
 
   popd
   print $GREEN "Built mqtt subscriber"
+}
+
+# clean mqtt subscriber build
+clean_mqtt_subscriber(){
+  print $YELLOW "Clean mqtt subscriber"
+  pushd $SRC_DIR
+
+  # cleanup old build
+  rm -rf build
+
+  popd
+  print $GREEN "Cleaned mqtt subscriber"
 }
 
 # start mqtt subscriber
@@ -140,6 +129,9 @@ case "$1" in
   build)
     build_mqtt_subscriber
     ;;
+  clean)
+    clean_mqtt_subscriber
+    ;;
   start)
     start_mqtt_subscriber
     ;;
@@ -150,7 +142,7 @@ case "$1" in
     run_publish_subscribe_test
     ;;
   *)
-    echo "Usage: $0 {build|start|stop|pub-sub}"
+    echo "Usage: $0 {build|clean|start|stop|pub-sub}"
     exit 1
     ;;
 esac

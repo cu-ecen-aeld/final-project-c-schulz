@@ -156,7 +156,7 @@ menuconfig:
 
 # flash buildroot image to device (default: /dev/sde, modify with TARGET_DEVICE=/dev/xy)
 install:
-ifneq (false,$(QEMU_BUILD))
+ifneq (true,$(QEMU_BUILD))
 	@echo -n "You are about to flash device $(TARGET_DEVICE). Are you sure? [y/N]" && read ans && if [ $${ans:-'N'} = 'y' ]; then \
 		dd if=./$(BUILDROOT_DIR)/output/images/sdcard.img of=$(TARGET_DEVICE) status=progress; \
 	fi

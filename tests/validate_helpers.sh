@@ -43,3 +43,35 @@ try_cmd_for(){
   timeout $timeout_duration bash -c "until $cmd; do sleep $sleep_duration; done"
 }
 export -f try_cmd_for
+
+# mqtt_publish $topic $message: publish string message on provided topic
+mqtt_publish(){
+  topic=$1
+  message=$2
+  mqtt pub -t $topic -m "$message" 2> /dev/null
+}
+export -f mqtt_publish
+
+# validate_json $file: check whether file contains valid json
+validate_json(){
+  file=$1
+  python3 -m json.tool $file > /dev/null
+  validate $?
+}
+export -f validate_json
+
+# validate_content $file $text: check whether file content and text are identical
+validate_content(){
+  file=$1
+  text=$2
+  [[ "$(cat $file)" = "$text" ]]
+  validate $?
+}
+export -f validate_content
+
+# scp_file $cmd: copy file from remote
+scp_file(){
+	file=$1
+  scp -P 2222 root@localhost:$file .
+}
+export -f scp_file

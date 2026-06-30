@@ -1,17 +1,19 @@
 #!/bin/bash
 
+###
 # Script to run qemu:
 #   Device needs access to 192.168.0.xx, so we can't use an emulated Pi Zero (has no networking interface)
 #   Instead, we switch to '-M versatilepb' board and use a virtual network bridge on the host
 
-# Setup tap0 interface (host):
-#   sudo ip tuntap add dev tap0 mode tap user $(whoami)     # create interface
-#   sudo ip link set tap0 up                                # activate interface
-#   sudo ip addr add 192.168.0.99/24 dev tap0               # manually assign IP
+###
+# Mosquitto config on host (/etc/mosquitto/mosquitto.conf):
+#   listener 1883 0.0.0.0
+#   allow_anonymous true
 
-# Configure eth0 interface (qemu):
-#   ip addr add 192.168.0.100/24 dev eth0
-#   ip link set eth0 up
+###
+# qemu instance is available via: 'ssh root@localhost -p 2222'
+# host is available via ip address '10.0.2.2'
+
 
 CURRENT_DIR=$(dirname ${BASH_SOURCE[0]})
 BUILDROOT_DIR=${CURRENT_DIR}/../buildroot/output/images

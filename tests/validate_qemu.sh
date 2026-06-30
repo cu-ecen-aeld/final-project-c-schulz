@@ -2,6 +2,7 @@
 
 TEST_DIR=$(dirname ${BASH_SOURCE[0]})
 REPO_DIR=${TEST_DIR}/..
+MQTT_LOGFILE=/tmp/mqttlog
 
 source ${TEST_DIR}/validate_helpers.sh
 
@@ -71,6 +72,62 @@ login_ssh(){
   print $GREEN "Logged in via ssh"
 }
 
+# run publish-subscribe test on mqtt subscriber
+run_publish_subscribe_test(){
+  print $YELLOW "Run publish-subscribe test"
+
+  JSON1='{"text": "HI!"}'
+  JSON2='{"text": "BYE!"}'
+  LOCAL_LOGFILE=$(basename $MQTT_LOGFILE)
+
+  # publish first test message
+  print $NC "Publishing first message..."
+  ssh_cmd "rm -f $MQTT_LOGFILE"
+  mqtt_publish test1 "$JSON1"
+  validate $?
+
+  print $NC "Validating first message..."
+  ssh_cmd "cat $MQTT_LOGFILE" > $LOCAL_LOGFILE
+  validate_json $LOCAL_LOGFILE
+
+  # publish second test message
+  print $NC "Publishing second message..."
+  ssh_cmd "rm -f $MQTT_LOGFILE"
+  mqtt_publish test2 "$JSON2"
+  validate $?
+
+  print $NC "Validating second message..."
+  ssh_cmd "cat $MQTT_LOGFILE" > $LOCAL_LOGFILE
+  validate_json $LOCAL_LOGFILE
+
+  # publish both messages (result is not json anymore!)
+  print $NC "Publishing both messages..."
+  ssh_cmd "rm -f $MQTT_LOGFILE"
+  mqtt_publish test1 "$JSON1"
+  validate $?
+  mqtt_publish test2 "$JSON2"
+  validate $?
+
+  # validate resulting content
+  print $NC "Validating both messages..."
+  JSON12='{
+    "topic": "test1",
+    "payload": {"text": "HI!"}
+}
+{
+    "topic": "test2",
+    "payload": {"text": "BYE!"}
+}'
+  ssh_cmd "cat $MQTT_LOGFILE" > $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$JSON12"
+
+  # remove logfile
+  ssh_cmd "rm -f $MQTT_LOGFILE"
+  rm -f $LOCAL_LOGFILE
+
+  print $GREEN "Finished publish-subscribe test"
+}
+
 # check if mqtt subscriber is running
 test_mqtt_subscriber(){
   print $YELLOW "Verify mqtt subscriber is running"
@@ -100,8 +157,11 @@ case "$1" in
   mqtt)
     test_mqtt_subscriber
     ;;
+  pub-sub)
+    run_publish_subscribe_test
+    ;;
   *)
-    echo "Usage: $0 {build|start|stop|ssh|mqtt}"
+    echo "Usage: $0 {build|start|stop|ssh|mqtt|pub-sub}"
     exit 1
     ;;
 esac
