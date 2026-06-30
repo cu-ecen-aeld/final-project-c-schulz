@@ -17,7 +17,7 @@ const std::string MQTT_DEFAULT_TOPIC{"#"};
 const std::string MQTT_DEFAULT_FILE{"/tmp/mqttlog"};
 
 const int MQTT_QOS = 1;
-const int MQTT_RETRY_ATTEMPTS = 5;
+const int MQTT_RETRY_ATTEMPTS = -1; //5;    // negative value: no limit
 
 const std::string MQTT_JSON_TEMPLATE{
 R"({
@@ -78,7 +78,7 @@ public:
                const std::string& mqtt_topic,
                const std::string& output_file) :
         client_{mqtt_host, mqtt_client_id},
-        connOpts_{},
+        connOpts_{mqtt::connect_options::v5()}, // default settings for MQTT v5
         listener_{mqtt_client_id},
         topic_{mqtt_topic},
         nretry_{0},
@@ -130,7 +130,7 @@ private:
     // (re-)connection failure callback, triggers reconnect attempt
     void on_failure(const mqtt::token& tok) override
     {
-        if (++nretry_ > MQTT_RETRY_ATTEMPTS) {
+        if ((MQTT_RETRY_ATTEMPTS >= 0) && (++nretry_ > MQTT_RETRY_ATTEMPTS)) {
             syslog(LOG_ERR, "Connection attempt finally failed.");
             exit(1);
         }
