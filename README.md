@@ -74,7 +74,20 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
     sudo snap install mqtt-explorer
     ```
 
-## Build and test mqtt subscriber
+5. Configure MQTT broker:
+
+    * In the mosquitto configuration at `/etc/mosquitto/mosquitto.conf`, add the following configuration lines to allow connections from remote:
+        ```
+        listener 1883 0.0.0.0
+        allow_anonymous true
+        ```
+
+    * Restart the MQTT broker with
+        ```
+        sudo systemctl restart mosquitto
+        ```
+
+## Build and test standalone mqtt subscriber
 
 1. Install dependencies:
     ```
