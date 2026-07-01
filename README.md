@@ -4,7 +4,7 @@
 ## Project Overview
 Please see the [Project Overview page](../../wiki/Project-Overview).
 
-## Build and install buildroot image
+## Build and install buildroot image for Raspberry Pi Zero W
 
 1. Clone repository:
     ```

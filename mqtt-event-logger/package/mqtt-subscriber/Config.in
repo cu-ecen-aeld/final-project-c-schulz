@@ -3,8 +3,8 @@ menuconfig BR2_PACKAGE_MQTT_SUBSCRIBER
 	select BR2_TOOLCHAIN_BUILDROOT_CXX
 	select BR2_PACKAGE_OPENSSL
 	help
-	  Includes the MQTT subscriber executable and start scripts in the buildroot image.
-	  Used to subscribe to an MQTT broker and log events (later forward them to a char device driver).
+	  User-space application that connects to a Mosquitto broker and listens for messages on configurable topics.
+	  Converts incoming MQTT messages into a structured event format and either logs them or forwards them to the kernel module through the character device interface.
 
 
 if BR2_PACKAGE_MQTT_SUBSCRIBER

@@ -24,4 +24,5 @@ MQTT_SUBSCRIBER_POST_INSTALL_TARGET_HOOKS += MQTT_SUBSCRIBER_CONFIGURE_MQTT_SUBS
 endif
 
 
+# execute cmake to build package
 $(eval $(cmake-package))
