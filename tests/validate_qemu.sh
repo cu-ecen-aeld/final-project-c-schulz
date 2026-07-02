@@ -137,6 +137,15 @@ test_mqtt_subscriber(){
   print $GREEN "Verified mqtt subscriber is running"
 }
 
+# check if kernel module is loaded
+test_mqtt_char_driver(){
+  print $YELLOW "Verify mqtt char driver is running"
+  ssh_cmd 'lsmod | grep -wq mqtt_char_driver'
+
+  validate $?
+  print $GREEN "Verified mqtt char driver is running"
+}
+
 
 ############################
 ## accepted script arguments
@@ -157,11 +166,14 @@ case "$1" in
   mqtt)
     test_mqtt_subscriber
     ;;
+  mod)
+    test_mqtt_char_driver
+    ;;
   pub-sub)
     run_publish_subscribe_test
     ;;
   *)
-    echo "Usage: $0 {build|start|stop|ssh|mqtt|pub-sub}"
+    echo "Usage: $0 {build|start|stop|ssh|mqtt|mod|pub-sub}"
     exit 1
     ;;
 esac

@@ -21,6 +21,8 @@ jobs:
             run: ./tests/validate_qemu.sh ssh
           - name: Check if mqtt subscriber is running
             run: ./tests/validate_qemu.sh mqtt
+          - name: Check if kernel module is loaded
+            run: ./tests/validate_qemu.sh mod
           - name: Run publish-subscribe test
             run: ./tests/validate_qemu.sh pub-sub
           - name: Stop qemu image

@@ -2,14 +2,15 @@
 
 case "$1" in
     start)
-        printf "Loading mqtt_char_driver module: "
-        modprobe mqtt_char_driver || insmod /lib/modules/$(uname -r)/extra/mqtt_char_driver.ko
-        [ $? = 0 ] && echo "OK" || echo "FAIL"
+        echo "Loading mqtt_char_driver module..."
+        modprobe mqtt_char_driver || insmod /lib/modules/$(uname -r)/extra/mqtt_char_driver.ko || exit 1
+        echo "Loaded mqtt_char_driver module."
         ;;
     stop)
-        printf "Unloading mqtt_char_driver module: "
-        rmmod mqtt_char_driver # && rm -f /dev/...
-        [ $? = 0 ] && echo "OK" || echo "FAIL"
+        echo "Unloading mqtt_char_driver module..."
+        rmmod mqtt_char_driver || exit 1
+        # && rm -f /dev/...
+        echo "Unloaded mqtt_char_driver module."
         ;;
     restart)
         $0 stop
