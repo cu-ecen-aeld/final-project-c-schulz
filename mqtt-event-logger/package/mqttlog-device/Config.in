@@ -1,5 +1,5 @@
-config BR2_PACKAGE_MQTT_CHAR_DRIVER
-	bool "mqtt-char-driver"
+config BR2_PACKAGE_MQTTLOG_DEVICE
+	bool "mqttlog-device"
 	depends on BR2_LINUX_KERNEL
 	help
 	  Implements a character device that provides kernel-space event logging for mqtt messages.

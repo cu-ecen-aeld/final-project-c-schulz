@@ -141,3 +141,9 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
     ```
     ./tests/validate_mqtt.sh stop
     ```
+
+## Build and test standalone mqtt char device driver
+
+1. Install dependencies:
+    ```
+    ```

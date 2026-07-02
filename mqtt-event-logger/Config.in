@@ -1,2 +1,2 @@
 source "$BR2_EXTERNAL_MQTT_EVENT_LOGGER_PATH/package/mqtt-subscriber/Config.in"
-source "$BR2_EXTERNAL_MQTT_EVENT_LOGGER_PATH/package/mqtt-char-driver/Config.in"
+source "$BR2_EXTERNAL_MQTT_EVENT_LOGGER_PATH/package/mqttlog-device/Config.in"

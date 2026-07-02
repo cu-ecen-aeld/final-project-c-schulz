@@ -138,12 +138,12 @@ test_mqtt_subscriber(){
 }
 
 # check if kernel module is loaded
-test_mqtt_char_driver(){
-  print $YELLOW "Verify mqtt char driver is running"
-  ssh_cmd 'lsmod | grep -wq mqtt_char_driver'
+test_mqttlog_device(){
+  print $YELLOW "Verify mqttlog_device kernel module is running"
+  ssh_cmd 'lsmod | grep -wq mqttlog_device'
 
   validate $?
-  print $GREEN "Verified mqtt char driver is running"
+  print $GREEN "Verified mqttlog_device kernel module is running"
 }
 
 
@@ -167,7 +167,7 @@ case "$1" in
     test_mqtt_subscriber
     ;;
   mod)
-    test_mqtt_char_driver
+    test_mqttlog_device
     ;;
   pub-sub)
     run_publish_subscribe_test

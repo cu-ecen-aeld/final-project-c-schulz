@@ -13,11 +13,11 @@ config BR2_CHAR_HASH
 	string
 	default "\x23"
 
-config BR2_PACKAGE_MQTT_SUBSCRIBER_MQTT_HOST
+config BR2_PACKAGE_MQTT_SUBSCRIBER_HOST
 	string "MQTT host"
 	default "mqtt://localhost:1883"
 
-config BR2_PACKAGE_MQTT_SUBSCRIBER_MQTT_TOPIC
+config BR2_PACKAGE_MQTT_SUBSCRIBER_TOPIC
 	string "MQTT topic"
 	default "\\$(BR2_CHAR_HASH)"
 endif

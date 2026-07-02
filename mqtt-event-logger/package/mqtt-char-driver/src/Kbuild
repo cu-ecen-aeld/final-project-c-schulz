@@ -1,1 +1,0 @@
-obj-m += mqtt_char_driver.o

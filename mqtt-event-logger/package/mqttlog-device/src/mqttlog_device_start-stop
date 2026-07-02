@@ -1,0 +1,23 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        echo "Loading mqttlog_device module..."
+        modprobe mqttlog_device || insmod /lib/modules/$(uname -r)/updates/mqttlog_device.ko || exit 1
+        echo "Loaded mqttlog_device module."
+        ;;
+    stop)
+        echo "Unloading mqttlog_device module..."
+        rmmod mqttlog_device || exit 1
+        echo "Unloaded mqttlog_device module."
+        ;;
+    restart)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
