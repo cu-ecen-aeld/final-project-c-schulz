@@ -1,7 +1,6 @@
 config BR2_PACKAGE_MQTT_CHAR_DRIVER
 	bool "mqtt-char-driver"
 	depends on BR2_LINUX_KERNEL
-	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
 	help
 	  Implements a character device that provides kernel-space event logging for mqtt messages.
 	  Stores incoming events in a ring buffer and exposes them to user-space applications through standard Linux file operations such as read() and poll().
