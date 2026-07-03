@@ -1,1 +1,6 @@
-obj-m += mqttlog_device.o
+obj-m += mqttlog.o
+
+mqttlog-y := \
+    mqttlog_main.o \
+    mqttlog_device.o \
+    mqttlog_core.o

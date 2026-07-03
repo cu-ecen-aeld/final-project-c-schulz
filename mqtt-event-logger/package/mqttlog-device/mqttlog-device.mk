@@ -12,7 +12,7 @@ MQTTLOG_DEVICE_SITE_METHOD = local
 # setup start-stop script
 ifeq ($(BR2_PACKAGE_MQTTLOG_DEVICE),y)
 define MQTTLOG_DEVICE_INSTALL_INIT_SCRIPT
-	$(INSTALL) -m 0755 $(@D)/mqttlog_device_start-stop $(TARGET_DIR)/etc/init.d/S98mqttlog-device
+	$(INSTALL) -m 0755 $(@D)/mqttlog_start-stop $(TARGET_DIR)/etc/init.d/S98mqttlog
 endef
 
 MQTTLOG_DEVICE_POST_INSTALL_TARGET_HOOKS += MQTTLOG_DEVICE_INSTALL_INIT_SCRIPT

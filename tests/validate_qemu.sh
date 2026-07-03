@@ -138,12 +138,12 @@ test_mqtt_subscriber(){
 }
 
 # check if kernel module is loaded
-test_mqttlog_device(){
-  print $YELLOW "Verify mqttlog_device kernel module is running"
-  ssh_cmd 'lsmod | grep -wq mqttlog_device'
+test_mqttlog_module(){
+  print $YELLOW "Verify mqttlog kernel module is running"
+  ssh_cmd 'lsmod | grep -wq mqttlog'
 
   validate $?
-  print $GREEN "Verified mqttlog_device kernel module is running"
+  print $GREEN "Verified mqttlog kernel module is running"
 }
 
 
@@ -167,7 +167,7 @@ case "$1" in
     test_mqtt_subscriber
     ;;
   mod)
-    test_mqttlog_device
+    test_mqttlog_module
     ;;
   pub-sub)
     run_publish_subscribe_test
