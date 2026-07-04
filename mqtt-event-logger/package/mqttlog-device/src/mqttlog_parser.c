@@ -14,18 +14,15 @@ int mqttlog_parse_message(const char *json,
     int ret;
 
     // validate input pointers
-    if (json == NULL)
-        return -EINVAL;
-
-    if (entry == NULL)
+    if (!json || !entry)
         return -EINVAL;
 
     // zero-initialize entry
-    memset(entry, 0, sizeof(entry));
+    memset(entry, 0, sizeof(*entry));
 
     // assign metadata
-    entry->sequence  = mqttlog_sequence++;
-    entry->timestamp = ktime_get_real_seconds();
+    entry->sequence  = mqttlog_sequence++;          // post-increment because first index is 0
+    entry->timestamp = ktime_get_real_seconds();    // TODO: readable format
 
     // parse and assign topic, discard parsed part of json
     ret = mqttlog_parse_field(json, "topic", MQTTLOG_FIELD_STRING, entry->topic, MQTTLOG_MAX_TOPIC_LEN, json);
@@ -50,19 +47,12 @@ void mqttlog_print_message(const struct mqttlog_entry *entry)
 }
 
 
-static inline const char *skip_whitespace(const char *p)
-{
-    while (*p == ' ' || *p == '\n' || *p == '\t' || *p == '\r')
-        ++p;
-    return p;
-}
-
 int mqttlog_parse_field(const char *json,
                         const char *field,
-                        enum mqttlog_json_type type,
+                        enum mqttlog_field_type type,
                         char *dst,
                         const size_t dst_size,
-                        char *rest)
+                        const char *rest)
 {
     const char *pos;
     const char *start;
@@ -71,7 +61,7 @@ int mqttlog_parse_field(const char *json,
     int brace_level;
 
     // validate input pointers
-    if (!json || !field || !dst || (dst_size == 0))
+    if (!json || !field || !dst || (dst_size == 0) || !rest)
         return -EINVAL;
 
     // find start of matching string
@@ -80,12 +70,13 @@ int mqttlog_parse_field(const char *json,
         return -EINVAL;
 
     // find next ':'
-    pos = strstr(json, ':');
+    pos = strchr(json, ':');
     if (!pos)
         return -EINVAL;
 
     // skip all whitespace
-    pos = skip_whitespace(pos + 1);
+    while (*pos == ' ' || *pos == '\n' || *pos == '\t' || *pos == '\r')
+        ++pos;
 
     // implement search for start and end of field
     switch (type) {
@@ -99,25 +90,15 @@ int mqttlog_parse_field(const char *json,
 
             // skip '"', initialize end
             start = pos + 1;
-            end   = start;
+            end   = start + 1;
 
-            do {
-                // set end to next occurence of '"'
-                end = strchr(start, '"');
-                if (!end)
-                    return -EINVAL;
-
-                // find out if current '"' is escaped
-                escaped = 0;
-                while (--end == "\\")
-                    escaped++;
-
-                // reset end
-                end = strchr(start, '"');
-            } while (escaped % 2 == 1); // odd number of '\'
+            // find end of string
+            skip_to_end_of_string(end);
+            if (*end != '"')
+                return -EINVAL;
 
             // estimate length to copy
-            copy_len = end - start;
+            copy_len = end - start; // TODO: -1?
             break;
         }
         // implementation for field type 'object' ({...})
@@ -127,6 +108,28 @@ int mqttlog_parse_field(const char *json,
             if (*pos != '{')
                 return -EINVAL;
 
+            // don't skip anything, start directly at '{'
+            start = pos;
+            end   = start + 1;
+
+            // find end of scope
+            brace_level = 1;
+            while (*end && (brace_level > 0)) {
+                if (*end == '"')
+                    skip_to_end_of_string(++end);
+                else if (*end == '{')
+                    ++brace_level;
+                else if (*end == '}')
+                    --brace_level;
+                ++end;
+            }
+
+            // validate state
+            if (brace_level != 0)
+                return -EINVAL;
+
+            // estimate length to copy
+            copy_len = end - start;
             break;
         }
         // implementation for field type 'array' ([...])
@@ -136,14 +139,54 @@ int mqttlog_parse_field(const char *json,
             if (*pos != '[')
                 return -EINVAL;
 
+            // don't skip anything, start directly at '['
+            start = pos;
+            end   = start + 1;
+
+            // find end of scope
+            brace_level = 1;
+            while (*end && (brace_level > 0)) {
+                if (*end == '"')
+                    skip_to_end_of_string(++end);
+                else if (*end == '[')
+                    ++brace_level;
+                else if (*end == ']')
+                    --brace_level;
+                ++end;
+            }
+
+            // validate state
+            if (brace_level != 0)
+                return -EINVAL;
+
+            // estimate length to copy
+            copy_len = end - start;
             break;
         }
         // implementation for field type 'value' (number, bool, null, ...)
         case MQTTLOG_FIELD_VALUE: {
+
+            // skip nothing
+            start = pos;
+            end   = start;
+
+            // continue until finding any delimiter
+            while (*end         &&
+                   *end != ','  &&
+                   *end != '}'  &&
+                   *end != ']'  &&
+                   *end != ' '  &&
+                   *end != '\n' &&
+                   *end != '\t' &&
+                   *end != '\r')
+                ++end;
+
+            // estimate length to copy
+            copy_len = end - start;
             break;
         }
         // implementation for field type 'unknown' (can be anything)
-        case MQTTLOG_FIELD_UNKNOWN {
+        case MQTTLOG_FIELD_UNKNOWN: {
             if (*pos == '"')
                 return mqttlog_parse_field(json, field, MQTTLOG_FIELD_STRING, dst, dst_size, rest);
             if (*pos == '{')
@@ -164,5 +207,23 @@ int mqttlog_parse_field(const char *json,
     memcpy(dst, start, copy_len);
     dst[copy_len] = '\0';
 
+    // set rest to remaining input value
+    rest = start + copy_len + 1;    // TODO: +1?
+
     return 0;
+}
+
+void skip_to_end_of_string(const char *end)
+{
+    int escaped = 0;
+    while (*end) {
+        if ((*end == '"') && (escaped % 2 == 0))
+            break;          // unescaped '"' detected
+        if (*end == '\\')
+            ++escaped;      // increase counter for '\'
+        else
+            escaped = 0;    // reset counter for '\'
+
+        ++end;
+    }
 }

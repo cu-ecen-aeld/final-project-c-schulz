@@ -332,6 +332,7 @@ int main(int argc, char* argv[])
     }
 
     // create mqtt client
+    mqtt_client_id = MQTT_CLIENT_ID + "_" + output_file;
     MQTTClient mqtt_client(mqtt_host, mqtt_client_id, mqtt_topic, output_file);
 
     // connect the mqtt client
