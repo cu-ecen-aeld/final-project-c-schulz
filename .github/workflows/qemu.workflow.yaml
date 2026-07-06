@@ -20,11 +20,13 @@ jobs:
           - name: Test ssh access
             run: ./tests/validate_qemu.sh ssh
           - name: Check if mqtt subscriber is running
-            run: ./tests/validate_qemu.sh mqtt
-          - name: Check if kernel module is loaded
-            run: ./tests/validate_qemu.sh mod
+            run: ./tests/validate_qemu.sh mqtt-subscriber
           - name: Run publish-subscribe test
-            run: ./tests/validate_qemu.sh pub-sub
+            run: ./tests/validate_qemu.sh mqtt-pub-sub
+          - name: Check if kernel module is loaded
+            run: ./tests/validate_qemu.sh mqttlog-module
+          - name: Run json parse tests for module
+            run: ./tests/validate_qemu.sh mqttlog-parse
           - name: Stop qemu image
             run: ./tests/validate_qemu.sh stop
           - name: Cleanup

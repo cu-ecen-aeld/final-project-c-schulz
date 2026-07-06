@@ -21,6 +21,7 @@ void mqttlog_print_message(const struct mqttlog_entry *entry);
 
 
 enum mqttlog_field_type {
+    MQTTLOG_FIELD_STRING_RAW,
     MQTTLOG_FIELD_STRING,
     MQTTLOG_FIELD_OBJECT,
     MQTTLOG_FIELD_ARRAY,
@@ -28,7 +29,7 @@ enum mqttlog_field_type {
     MQTTLOG_FIELD_UNKNOWN
 };
 
-int mqttlog_parse_field(const char *json, const char *field, enum mqttlog_field_type type, char *dst, const size_t dst_size, const char *rest);
-void skip_to_end_of_string(const char *end);
+int  mqttlog_parse_field(const char *json, const char *field, enum mqttlog_field_type type, char *dst, const size_t dst_size, const char** rest);
+void skip_to_end_of_string(const char** end);
 
 #endif // MQTTLOG_PARSER_H

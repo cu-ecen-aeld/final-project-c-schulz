@@ -72,6 +72,15 @@ login_ssh(){
   print $GREEN "Logged in via ssh"
 }
 
+# check if mqtt subscriber is running
+test_mqtt_subscriber(){
+  print $YELLOW "Verify mqtt subscriber is running"
+  ssh_cmd 'command -v /usr/bin/mqtt_subscriber'
+
+  validate $?
+  print $GREEN "Verified mqtt subscriber is running"
+}
+
 # run publish-subscribe test on mqtt subscriber
 run_publish_subscribe_test(){
   print $YELLOW "Run publish-subscribe test"
@@ -128,15 +137,6 @@ run_publish_subscribe_test(){
   print $GREEN "Finished publish-subscribe test"
 }
 
-# check if mqtt subscriber is running
-test_mqtt_subscriber(){
-  print $YELLOW "Verify mqtt subscriber is running"
-  ssh_cmd 'command -v /usr/bin/mqtt_subscriber'
-
-  validate $?
-  print $GREEN "Verified mqtt subscriber is running"
-}
-
 # check if kernel module is loaded
 test_mqttlog_module(){
   print $YELLOW "Verify mqttlog kernel module is running"
@@ -144,6 +144,52 @@ test_mqttlog_module(){
 
   validate $?
   print $GREEN "Verified mqttlog kernel module is running"
+}
+
+run_parse_test(){
+  print $YELLOW "Run parse test"
+
+  print $NC "Validating int payload..."
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": 123 }' > /dev/mqttlog"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "payload  : 123"
+  validate $?
+
+  print $NC "Validating null payload..."
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": null }' > /dev/mqttlog"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "payload  : null"
+  validate $?
+
+  print $NC "Validating string payload..."
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": \"ASDF\" }' > /dev/mqttlog"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "payload  : \"ASDF\""
+  validate $?
+
+  print $NC "Validating array payload..."
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": [1,2,3] }' > /dev/mqttlog"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "payload  : \[1,2,3\]"
+  validate $?
+
+  print $NC "Validating object payload..."
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": {\"A\": 2, \"B\": 3, \"C\": 0} }' > /dev/mqttlog"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
+  validate $?
+  ssh_cmd "tail -n10 /var/log/messages" | grep "payload  : {\"A\": 2, \"B\": 3, \"C\": 0}"
+  validate $?
+
+  print $GREEN "Finished parse test"
 }
 
 
@@ -163,17 +209,20 @@ case "$1" in
   ssh)
     login_ssh
     ;;
-  mqtt)
+  mqtt-subscriber)
     test_mqtt_subscriber
     ;;
-  mod)
-    test_mqttlog_module
-    ;;
-  pub-sub)
+  mqtt-pub-sub)
     run_publish_subscribe_test
     ;;
+  mqttlog-module)
+    test_mqttlog_module
+    ;;
+  mqttlog-parse)
+    run_parse_test
+    ;;
   *)
-    echo "Usage: $0 {build|start|stop|ssh|mqtt|mod|pub-sub}"
+    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse}"
     exit 1
     ;;
 esac

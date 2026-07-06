@@ -25,12 +25,12 @@ int mqttlog_parse_message(const char *json,
     entry->timestamp = ktime_get_real_seconds();    // TODO: readable format
 
     // parse and assign topic, discard parsed part of json
-    ret = mqttlog_parse_field(json, "topic", MQTTLOG_FIELD_STRING, entry->topic, MQTTLOG_MAX_TOPIC_LEN, json);
+    ret = mqttlog_parse_field(json, "topic", MQTTLOG_FIELD_STRING_RAW, entry->topic, MQTTLOG_MAX_TOPIC_LEN, &json);
     if (ret)
         return ret;
 
     // parse and assign payload, discard parsed part of json
-    ret = mqttlog_parse_field(json, "payload", MQTTLOG_FIELD_UNKNOWN, entry->payload, MQTTLOG_MAX_PAYLOAD_LEN, json);
+    ret = mqttlog_parse_field(json, "payload", MQTTLOG_FIELD_UNKNOWN, entry->payload, MQTTLOG_MAX_PAYLOAD_LEN, &json);
     if (ret)
         return ret;
 
@@ -39,6 +39,10 @@ int mqttlog_parse_message(const char *json,
 
 void mqttlog_print_message(const struct mqttlog_entry *entry)
 {
+    // validate input pointer
+    if (!entry)
+        return;
+
     pr_info("mqttlog:\n");
     pr_info("  sequence : %llu\n", entry->sequence);
     pr_info("  timestamp: %llu\n", entry->timestamp);
@@ -52,7 +56,7 @@ int mqttlog_parse_field(const char *json,
                         enum mqttlog_field_type type,
                         char *dst,
                         const size_t dst_size,
-                        const char *rest)
+                        const char** rest)
 {
     const char *pos;
     const char *start;
@@ -70,18 +74,19 @@ int mqttlog_parse_field(const char *json,
         return -EINVAL;
 
     // find next ':'
-    pos = strchr(json, ':');
+    pos = strchr(pos, ':');
     if (!pos)
         return -EINVAL;
 
-    // skip all whitespace
-    while (*pos == ' ' || *pos == '\n' || *pos == '\t' || *pos == '\r')
-        ++pos;
+    // skip ':', then skip all whitespace
+    do ++pos;
+    while (*pos == ' ' || *pos == '\n' || *pos == '\t' || *pos == '\r');
 
     // implement search for start and end of field
     switch (type) {
 
         // implementation for field type 'string'
+        case MQTTLOG_FIELD_STRING_RAW:
         case MQTTLOG_FIELD_STRING: {
 
             // because of whitespace skipping, next pos needs to be a '"'
@@ -89,16 +94,19 @@ int mqttlog_parse_field(const char *json,
                 return -EINVAL;
 
             // skip '"', initialize end
-            start = pos + 1;
+            start = pos; // +1: skip leading '"'
             end   = start + 1;
 
             // find end of string
-            skip_to_end_of_string(end);
+            skip_to_end_of_string(&end);
+
             if (*end != '"')
                 return -EINVAL;
 
+
             // estimate length to copy
-            copy_len = end - start; // TODO: -1?
+            copy_len = end - start + 1; // +1: include trailing '"'
+
             break;
         }
         // implementation for field type 'object' ({...})
@@ -115,8 +123,10 @@ int mqttlog_parse_field(const char *json,
             // find end of scope
             brace_level = 1;
             while (*end && (brace_level > 0)) {
-                if (*end == '"')
-                    skip_to_end_of_string(++end);
+                if (*end == '"') {
+                    ++end;
+                    skip_to_end_of_string(&end);
+                }
                 else if (*end == '{')
                     ++brace_level;
                 else if (*end == '}')
@@ -146,8 +156,10 @@ int mqttlog_parse_field(const char *json,
             // find end of scope
             brace_level = 1;
             while (*end && (brace_level > 0)) {
-                if (*end == '"')
-                    skip_to_end_of_string(++end);
+                if (*end == '"') {
+                    ++end;
+                    skip_to_end_of_string(&end);
+                }
                 else if (*end == '[')
                     ++brace_level;
                 else if (*end == ']')
@@ -191,12 +203,18 @@ int mqttlog_parse_field(const char *json,
                 return mqttlog_parse_field(json, field, MQTTLOG_FIELD_STRING, dst, dst_size, rest);
             if (*pos == '{')
                 return mqttlog_parse_field(json, field, MQTTLOG_FIELD_OBJECT, dst, dst_size, rest);
-            if (*pos == ']')
+            if (*pos == '[')
                 return mqttlog_parse_field(json, field, MQTTLOG_FIELD_ARRAY, dst, dst_size, rest);
             return mqttlog_parse_field(json, field, MQTTLOG_FIELD_VALUE, dst, dst_size, rest);
         }
         default:
             return -EINVAL;
+    }
+
+    // special case: copy string value, but without leading and trailing '"'
+    if (type == MQTTLOG_FIELD_STRING_RAW) {
+        ++start;
+        copy_len -= 2;
     }
 
     // copy only the first letters up until the allowed maximum field size
@@ -208,22 +226,25 @@ int mqttlog_parse_field(const char *json,
     dst[copy_len] = '\0';
 
     // set rest to remaining input value
-    rest = start + copy_len + 1;    // TODO: +1?
+    *rest = start + copy_len + 1;    // TODO: +1?
 
     return 0;
 }
 
-void skip_to_end_of_string(const char *end)
+void skip_to_end_of_string(const char** end)
 {
+    if (!end)
+        return;
+
     int escaped = 0;
-    while (*end) {
-        if ((*end == '"') && (escaped % 2 == 0))
+    while (**end) {
+        if ((**end == '"') && (escaped % 2 == 0))
             break;          // unescaped '"' detected
-        if (*end == '\\')
+        if (**end == '\\')
             ++escaped;      // increase counter for '\'
         else
             escaped = 0;    // reset counter for '\'
 
-        ++end;
+        ++(*end);
     }
 }
