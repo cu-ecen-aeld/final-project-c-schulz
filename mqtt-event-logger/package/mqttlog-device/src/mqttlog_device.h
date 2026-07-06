@@ -17,5 +17,6 @@ struct mqttlog_dev {
 // init/exit functions (when module is loaded/unloaded)
 int  mqttlog_device_init(void);
 void mqttlog_device_exit(void);
+int  mqttlog_device_cleanup(const bool init, const long ret);
 
 #endif // MQTTLOG_DEVICE_H
