@@ -86,7 +86,7 @@ test_mqtt_subscriber(){
 
 # run publish-subscribe test on mqtt subscriber
 run_mqtt_publish_subscribe_test(){
-  print $YELLOW "Run publish-subscribe test"
+  print $YELLOW "Run publish-subscribe test via $MQTT_LOGFILE"
 
   print $NC "Starting second mqtt subscriber that prints to log file..."
   START_CMD="/usr/bin/mqtt_subscriber -d -h mqtt://10.0.2.2:1883 -f $MQTT_LOGFILE"
@@ -147,7 +147,7 @@ run_mqtt_publish_subscribe_test(){
   ssh_cmd "kill -SIGINT $PID"
   validate $?
 
-  print $GREEN "Finished publish-subscribe test"
+  print $GREEN "Finished publish-subscribe test via $MQTT_LOGFILE"
 }
 
 # check if kernel module is loaded
@@ -283,8 +283,87 @@ run_mqttlog_buffer_size_test(){
   [ $(echo "$SEQ_LAST - $SEQ_FIRST" | bc) -eq 128 ]
   validate $?
 
+  # remove logfile copy
   rm -f $LOCAL_LOGFILE
   print $GREEN "Finished buffer size test"
+}
+
+run_mqttlog_publish_subscribe_test(){
+
+  print $YELLOW "Run publish-subscribe test via $MQTT_DEVICE"
+
+  JSON1='{"text": "HI!"}'
+  JSON2='{"text": "BYE!"}'
+  LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
+
+
+  CONTENT1='{
+  sequence : ***,
+  timestamp: ***,
+  topic    : test1,
+  payload  : {"text": "HI!"}
+}'
+  CONTENT2='{
+  sequence : ***,
+  timestamp: ***,
+  topic    : test2,
+  payload  : {"text": "BYE!"}
+}'
+  CONTENT12='{
+  sequence : ***,
+  timestamp: ***,
+  topic    : test1,
+  payload  : {"text": "HI!"}
+}
+{
+  sequence : ***,
+  timestamp: ***,
+  topic    : test2,
+  payload  : {"text": "BYE!"}
+}'
+
+  # clear ringbuffer
+  ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
+
+  # publish first test message
+  print $NC "Publishing first message..."
+  mqtt_publish test1 "$JSON1"
+  validate $?
+
+  print $NC "Validating first message..."
+  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
+  sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT1"
+
+  # publish second test message
+  print $NC "Publishing second message..."
+  mqtt_publish test2 "$JSON2"
+  validate $?
+
+  print $NC "Validating second message..."
+  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
+  sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT2"
+
+  # publish both messages
+  print $NC "Publishing both messages..."
+  mqtt_publish test1 "$JSON1"
+  validate $?
+  mqtt_publish test2 "$JSON2"
+  validate $?
+
+  # validate resulting content
+  print $NC "Validating both messages..."
+  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
+  sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT12"
+
+  # remove logfile copy
+  rm -f $LOCAL_LOGFILE
+  print $GREEN "Finished publish-subscribe test via $MQTT_DEVICE"
 }
 
 
@@ -322,8 +401,11 @@ case "$1" in
   mqttlog-buffer-size)
     run_mqttlog_buffer_size_test
     ;;
+  mqttlog-pub-sub)
+    run_mqttlog_publish_subscribe_test
+    ;;
   *)
-    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse|mqttlog-cat|mqttlog-buffer-size}"
+    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse|mqttlog-cat|mqttlog-buffer-size|mqttlog-pub-sub}"
     exit 1
     ;;
 esac
