@@ -21,7 +21,7 @@ jobs:
             run: ./tests/validate_qemu.sh ssh
           - name: Check if mqtt subscriber is running
             run: ./tests/validate_qemu.sh mqtt-subscriber
-          - name: Run publish-subscribe test
+          - name: Run publish-subscribe test via standalone mqtt subscriber
             run: ./tests/validate_qemu.sh mqtt-pub-sub
           - name: Check if kernel module is loaded
             run: ./tests/validate_qemu.sh mqttlog-module
@@ -31,6 +31,8 @@ jobs:
             run: ./tests/validate_qemu.sh mqttlog-cat
           - name: Run buffer size test for module
             run: ./tests/validate_qemu.sh mqttlog-buffer-size
+          - name: Run publish-subscribe test via kernel module
+            run: ./tests/validate_qemu.sh mqttlog-pub-sub
           - name: Stop qemu image
             if: always()
             run: ./tests/validate_qemu.sh stop
