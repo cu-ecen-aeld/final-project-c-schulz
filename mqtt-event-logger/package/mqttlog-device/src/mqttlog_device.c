@@ -5,8 +5,9 @@
 #include <linux/device.h>       // class_create(), device_create()
 #include <linux/kernel.h>       // pr_info()
 
-#include "mqttlog_device.h"     // -> header containing device-level struct and function decls
+#include "mqttlog_device.h"     // -> header containing device-level function decls
 #include "mqttlog_core.h"       // -> header containing read/write function decls
+
 #define DEVICE_NAME "mqttlog"   // -> module creates /dev/mqttlog device
 
 
@@ -27,6 +28,10 @@ const struct file_operations mqttlog_fops = {
 int mqttlog_device_init(void)
 {
     long ret;
+
+    // initialize mqttlog struct
+    memset(&mqttlog,0,sizeof(struct mqttlog_dev));
+    mqttlog_init(&mqttlog);
 
     // reserve a free major/minor number, returned via dev_num
     ret = alloc_chrdev_region(&mqttlog.dev_num, 0, 1, DEVICE_NAME);

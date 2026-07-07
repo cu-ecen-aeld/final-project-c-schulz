@@ -4,4 +4,5 @@ mqttlog-y := \
     mqttlog_main.o \
     mqttlog_device.o \
     mqttlog_core.o \
-    mqttlog_parser.o
+    mqttlog_parser.o \
+    mqttlog_ringbuf.o

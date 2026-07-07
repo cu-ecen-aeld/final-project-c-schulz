@@ -37,7 +37,7 @@ int mqttlog_parse_message(const char *json,
     return 0;
 }
 
-void mqttlog_print_message(const struct mqttlog_entry *entry)
+void mqttlog_print_entry(const struct mqttlog_entry *entry)
 {
     // validate input pointer
     if (!entry)
@@ -50,6 +50,26 @@ void mqttlog_print_message(const struct mqttlog_entry *entry)
     pr_info("  payload  : %s\n",   entry->payload);
 }
 
+int mqttlog_format_entry(const struct mqttlog_entry *entry,
+                         char* out, size_t out_size)
+{
+    // validate input pointer
+    if (!entry)
+        return 0;
+
+    return scnprintf(out,
+                    out_size,
+                    "{\n"
+                    "  sequence : %llu,\n"
+                    "  timestamp: %llu,\n"
+                    "  topic    : %s,\n"
+                    "  payload  : %s\n"
+                    "}\n",
+                    entry->sequence,
+                    entry->timestamp,
+                    entry->topic,
+                    entry->payload);
+}
 
 int mqttlog_parse_field(const char *json,
                         const char *field,

@@ -3,10 +3,10 @@
 #ifndef MQTTLOG_CORE_H
 #define MQTTLOG_CORE_H
 
-#include <linux/fs.h>           // struct file, inode
-#include <linux/cdev.h>         // struct cdev
+#include "mqttlog_types.h"
 
 // function definitions
+void    mqttlog_init   (struct mqttlog_dev *mqttlog);
 int     mqttlog_open   (struct inode *inode, struct file *file);
 int     mqttlog_release(struct inode *inode, struct file *file);
 ssize_t mqttlog_write  (struct file *file, const char __user *buf, size_t len, loff_t *off);
