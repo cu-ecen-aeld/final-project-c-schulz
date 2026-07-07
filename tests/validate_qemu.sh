@@ -3,6 +3,7 @@
 TEST_DIR=$(dirname ${BASH_SOURCE[0]})
 REPO_DIR=${TEST_DIR}/..
 MQTT_LOGFILE=/tmp/mqttlog
+MQTT_DEVICE=/dev/mqttlog
 
 source ${TEST_DIR}/validate_helpers.sh
 
@@ -84,7 +85,7 @@ test_mqtt_subscriber(){
 }
 
 # run publish-subscribe test on mqtt subscriber
-run_publish_subscribe_test(){
+run_mqtt_publish_subscribe_test(){
   print $YELLOW "Run publish-subscribe test"
 
   JSON1='{"text": "HI!"}'
@@ -148,11 +149,11 @@ test_mqttlog_module(){
   print $GREEN "Verified mqttlog kernel module is running"
 }
 
-run_parse_test(){
+run_mqttlog_parse_test(){
   print $YELLOW "Run parse test"
 
   print $NC "Validating int payload..."
-  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": 123 }' > /dev/mqttlog"
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": 123 }' > $MQTT_DEVICE"
   validate $?
   ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
   validate $?
@@ -160,7 +161,7 @@ run_parse_test(){
   validate $?
 
   print $NC "Validating null payload..."
-  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": null }' > /dev/mqttlog"
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": null }' > $MQTT_DEVICE"
   validate $?
   ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
   validate $?
@@ -168,7 +169,7 @@ run_parse_test(){
   validate $?
 
   print $NC "Validating string payload..."
-  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": \"ASDF\" }' > /dev/mqttlog"
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": \"ASDF\" }' > $MQTT_DEVICE"
   validate $?
   ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
   validate $?
@@ -176,7 +177,7 @@ run_parse_test(){
   validate $?
 
   print $NC "Validating array payload..."
-  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": [1,2,3] }' > /dev/mqttlog"
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": [1,2,3] }' > $MQTT_DEVICE"
   validate $?
   ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
   validate $?
@@ -184,7 +185,7 @@ run_parse_test(){
   validate $?
 
   print $NC "Validating object payload..."
-  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": {\"A\": 2, \"B\": 3, \"C\": 0} }' > /dev/mqttlog"
+  ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": {\"A\": 2, \"B\": 3, \"C\": 0} }' > $MQTT_DEVICE"
   validate $?
   ssh_cmd "tail -n10 /var/log/messages" | grep "topic    : test-topic"
   validate $?
@@ -192,6 +193,52 @@ run_parse_test(){
   validate $?
 
   print $GREEN "Finished parse test"
+}
+
+run_mqttlog_cat_test(){
+  print $YELLOW "Run cat test"
+
+  LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
+
+  print $NC "Echoing int payload..."
+  ssh_cmd "echo '{ \"topic\": \"test-topic1\", \"payload\": 123 }' > $MQTT_DEVICE"
+  validate $?
+
+  print $NC "Echoing array payload..."
+  ssh_cmd "echo '{ \"topic\": \"test-topic2\", \"payload\": [1,2,3] }' > $MQTT_DEVICE"
+  validate $?
+
+  print $NC "Echoing object payload..."
+  ssh_cmd "echo '{ \"topic\": \"test-topic3\", \"payload\": {\"A\": 2, \"B\": 3, \"C\": 0} }' > $MQTT_DEVICE"
+  validate $?
+
+  print $NC "Validating cat..."
+  rm -f $LOCAL_LOGFILE
+  OUT='{
+  sequence : 0,
+  timestamp: ***,
+  topic    : test-topic1,
+  payload  : 123
+}
+{
+  sequence : 1,
+  timestamp: ***,
+  topic    : test-topic2,
+  payload  : [1,2,3]
+}
+{
+  sequence : 2,
+  timestamp: ***,
+  topic    : test-topic3,
+  payload  : {"A": 2, "B": 3, "C": 0}
+}'
+  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
+
+  validate_content $LOCAL_LOGFILE "$OUT"
+  rm -f $LOCAL_LOGFILE
+
+  print $GREEN "Finished cat test"
 }
 
 
@@ -215,16 +262,19 @@ case "$1" in
     test_mqtt_subscriber
     ;;
   mqtt-pub-sub)
-    run_publish_subscribe_test
+    run_mqtt_publish_subscribe_test
     ;;
   mqttlog-module)
     test_mqttlog_module
     ;;
   mqttlog-parse)
-    run_parse_test
+    run_mqttlog_parse_test
+    ;;
+  mqttlog-cat)
+    run_mqttlog_cat_test
     ;;
   *)
-    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse}"
+    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse|mqttlog-cat}"
     exit 1
     ;;
 esac

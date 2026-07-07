@@ -27,6 +27,8 @@ jobs:
             run: ./tests/validate_qemu.sh mqttlog-module
           - name: Run json parse tests for module
             run: ./tests/validate_qemu.sh mqttlog-parse
+          - name: Run simple ringbuffer tests for module
+            run: ./tests/validate_qemu.sh mqttlog-cat
           - name: Stop qemu image
             if: always()
             run: ./tests/validate_qemu.sh stop
