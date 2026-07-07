@@ -25,8 +25,10 @@ build_image(){
     make clean ${QEMU_BUILD_CONFIG}
     validate $?
   else
+    # remove old mqttlog and mqtt-subscriber sources to force rebuild
     print $YELLOW "Re-use old build, config has not changed"
-    make -C buildroot mqtt-subscriber-rebuild
+    rm -r rm buildroot/output/build/mqtt-subscriber*
+    rm -r rm buildroot/output/build/mqttlog-device-*
   fi
 
   # compile buildroot image

@@ -28,6 +28,7 @@ jobs:
           - name: Run json parse tests for module
             run: ./tests/validate_qemu.sh mqttlog-parse
           - name: Stop qemu image
+            if: always()
             run: ./tests/validate_qemu.sh stop
           - name: Cleanup
             if: always()
