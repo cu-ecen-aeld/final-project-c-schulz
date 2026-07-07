@@ -199,6 +199,9 @@ run_mqttlog_cat_test(){
   print $YELLOW "Run cat test"
   LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
 
+  # clear ringbuffer
+  ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
+
   print $NC "Echoing int payload..."
   ssh_cmd "echo '{ \"topic\": \"test-topic1\", \"payload\": 123 }' > $MQTT_DEVICE"
   validate $?
@@ -214,24 +217,25 @@ run_mqttlog_cat_test(){
   print $NC "Validating cat..."
   rm -f $LOCAL_LOGFILE
   OUT='{
-  sequence : 0,
+  sequence : ***,
   timestamp: ***,
   topic    : test-topic1,
   payload  : 123
 }
 {
-  sequence : 1,
+  sequence : ***,
   timestamp: ***,
   topic    : test-topic2,
   payload  : [1,2,3]
 }
 {
-  sequence : 2,
+  sequence : ***,
   timestamp: ***,
   topic    : test-topic3,
   payload  : {"A": 2, "B": 3, "C": 0}
 }'
   ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
   sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
 
   validate_content $LOCAL_LOGFILE "$OUT"
