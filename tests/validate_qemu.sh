@@ -88,6 +88,11 @@ test_mqtt_subscriber(){
 run_mqtt_publish_subscribe_test(){
   print $YELLOW "Run publish-subscribe test"
 
+  print $NC "Starting second mqtt subscriber that prints to log file..."
+  START_CMD="/usr/bin/mqtt_subscriber -d -h mqtt://10.0.2.2:1883 -f $MQTT_LOGFILE"
+  ssh_cmd "$START_CMD"
+  validate $?
+
   JSON1='{"text": "HI!"}'
   JSON2='{"text": "BYE!"}'
   LOCAL_LOGFILE=$(basename $MQTT_LOGFILE)
@@ -136,6 +141,11 @@ run_mqtt_publish_subscribe_test(){
   # remove logfile
   ssh_cmd "rm -f $MQTT_LOGFILE"
   rm -f $LOCAL_LOGFILE
+
+  print $NC "Stopping second mqtt subscriber..."
+  PID=$(ssh_cmd "ps -a | grep \"$START_CMD\"" | head -n 1 | awk {'print $1'})
+  ssh_cmd "kill -SIGINT $PID"
+  validate $?
 
   print $GREEN "Finished publish-subscribe test"
 }
