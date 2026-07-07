@@ -168,7 +168,7 @@ ssize_t mqttlog_read(struct file *file,
 
     // if not even the first message fit into buffer, return no space error
     if (out_len == 0)
-        return -ENOSPC;
+        return -ENOBUFS;
 
     // copy message into user space buffer
     ret = copy_to_user(buf, out, out_len);

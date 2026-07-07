@@ -197,7 +197,6 @@ run_mqttlog_parse_test(){
 
 run_mqttlog_cat_test(){
   print $YELLOW "Run cat test"
-
   LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
 
   print $NC "Echoing int payload..."
@@ -241,6 +240,39 @@ run_mqttlog_cat_test(){
   print $GREEN "Finished cat test"
 }
 
+run_mqttlog_buffer_size_test(){
+  print $YELLOW "Run buffer size test"
+
+  LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
+  rm -f $LOCAL_LOGFILE
+
+  # ringbuffer size is 128, so we push >128 elements
+  for i in {1..150}; do
+    ssh_cmd "echo '{ \"topic\": \"test-topic1\", \"payload\": 123 }' > $MQTT_DEVICE"
+    validate $?
+  done
+  sync
+
+  # execute cat in a loop after provoking overflow
+  # required multiple times because buffer is too small for all messages
+  while ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE; do
+    if [ -z $SEQ_FIRST ]; then
+      SEQ_FIRST=$(egrep sequence $LOCAL_LOGFILE | head -n 1 | awk '{print $3}' | cut -d , -f 1)
+      SEQ_FIRST=$(echo "$SEQ_FIRST - 1" | bc)   # -1 because this is already one of our 150 messages
+    fi
+    SEQ_LAST=$(egrep sequence $LOCAL_LOGFILE | tail -n 1 | awk '{print $3}' | cut -d , -f 1)
+  done
+
+  print $NC "Sequence ids: $SEQ_FIRST - $SEQ_LAST"
+
+  print $NC "Validating sequence ids..."
+  [ $(echo "$SEQ_LAST - $SEQ_FIRST" | bc) -eq 128 ]
+  validate $?
+
+  rm -f $LOCAL_LOGFILE
+  print $GREEN "Finished buffer size test"
+}
+
 
 ############################
 ## accepted script arguments
@@ -273,8 +305,11 @@ case "$1" in
   mqttlog-cat)
     run_mqttlog_cat_test
     ;;
+  mqttlog-buffer-size)
+    run_mqttlog_buffer_size_test
+    ;;
   *)
-    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse|mqttlog-cat}"
+    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse|mqttlog-cat|mqttlog-buffer-size}"
     exit 1
     ;;
 esac
