@@ -3,7 +3,7 @@
 case "$1" in
     start)
         printf "Starting mqtt subscriber: "
-        start-stop-daemon -S -n mqtt_subscriber -a /usr/bin/mqtt_subscriber -- -d -h %HOST% -t %TOPIC% -f /tmp/mqttlog
+        start-stop-daemon -S -n mqtt_subscriber -a /usr/bin/mqtt_subscriber -- -d -h %HOST% -t %TOPIC% -f /dev/mqttlog
         [ $? = 0 ] && echo "OK" || echo "FAIL"
         ;;
     stop)
