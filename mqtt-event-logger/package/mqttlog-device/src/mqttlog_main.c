@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
 
-#include <linux/module.h>       // MODULE_* macros
-#include <linux/init.h>         // module_init(), module_exit()
+#include <linux/module.h>           // MODULE_* macros
+#include <linux/init.h>             // module_init(), module_exit()
 
-#include "mqttlog_device.h"     // -> header containing struct and function decls
+#include "mqttlog_device.h"         // -> header containing struct and function decls
 
 
 MODULE_DESCRIPTION("MQTT Event Logger");

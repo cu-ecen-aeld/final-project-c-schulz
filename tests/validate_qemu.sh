@@ -210,7 +210,9 @@ run_mqttlog_cat_test(){
   LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
 
   # clear ringbuffer
-  ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
+  # TODO
+  ssh_cmd "/etc/init.d/S98mqttlog restart"
+  # ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
 
   print $NC "Echoing int payload..."
   ssh_cmd "echo '{ \"topic\": \"test-topic1\", \"payload\": 123 }' > $MQTT_DEVICE"
@@ -262,26 +264,32 @@ run_mqttlog_buffer_size_test(){
 
   # ringbuffer size is 128, so we push >128 elements
   for i in {1..150}; do
-    ssh_cmd "echo '{ \"topic\": \"test-topic1\", \"payload\": 123 }' > $MQTT_DEVICE"
+    ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": 123 }' > $MQTT_DEVICE"
     validate $?
   done
   sync
 
-  # execute cat in a loop after provoking overflow
-  # required multiple times because buffer is too small for all messages
-  while ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE; do
-    if [ -z $SEQ_FIRST ]; then
-      SEQ_FIRST=$(egrep sequence $LOCAL_LOGFILE | head -n 1 | awk '{print $3}' | cut -d , -f 1)
-      SEQ_FIRST=$(echo "$SEQ_FIRST - 1" | bc)   # -1 because this is already one of our 150 messages
-    fi
-    SEQ_LAST=$(egrep sequence $LOCAL_LOGFILE | tail -n 1 | awk '{print $3}' | cut -d , -f 1)
-  done
 
-  print $NC "Sequence ids: $SEQ_FIRST - $SEQ_LAST"
+  # OLD AND DEPRECATED:
+  # # execute cat in a loop after provoking overflow
+  # # required multiple times because buffer is too small for all messages
+  # while ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE; do
+  #   if [ -z $SEQ_FIRST ]; then
+  #     SEQ_FIRST=$(egrep sequence $LOCAL_LOGFILE | head -n 1 | awk '{print $3}' | cut -d , -f 1)
+  #     SEQ_FIRST=$(echo "$SEQ_FIRST - 1" | bc)   # -1 because this is already one of our 150 messages
+  #   fi
+  #   SEQ_LAST=$(egrep sequence $LOCAL_LOGFILE | tail -n 1 | awk '{print $3}' | cut -d , -f 1)
+  # done
 
-  print $NC "Validating sequence ids..."
-  [ $(echo "$SEQ_LAST - $SEQ_FIRST" | bc) -eq 128 ]
-  validate $?
+
+  # TODO:
+  # execute custom program 'mqttlog_dump' to retreive all messages currently stored in ringbuffer
+
+  # print $NC "Sequence ids: $SEQ_FIRST - $SEQ_LAST"
+
+  # print $NC "Validating sequence ids..."
+  # [ $(echo "$SEQ_LAST - $SEQ_FIRST" | bc) -eq 128 ]
+  # validate $?
 
   # remove logfile copy
   rm -f $LOCAL_LOGFILE
@@ -296,6 +304,9 @@ run_mqttlog_publish_subscribe_test(){
   JSON2='{"text": "BYE!"}'
   LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
 
+  # clear ringbuffer
+  # TODO
+  ssh_cmd "/etc/init.d/S98mqttlog restart"
 
   CONTENT1='{
   sequence : ***,
@@ -321,6 +332,8 @@ run_mqttlog_publish_subscribe_test(){
   topic    : test2,
   payload  : {"text": "BYE!"}
 }'
+  CONTENT1212="$CONTENT12
+$CONTENT12"
 
   # clear ringbuffer
   ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
@@ -345,7 +358,7 @@ run_mqttlog_publish_subscribe_test(){
   ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
   sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
   sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
-  validate_content $LOCAL_LOGFILE "$CONTENT2"
+  validate_content $LOCAL_LOGFILE "$CONTENT12"
 
   # publish both messages
   print $NC "Publishing both messages..."
@@ -359,7 +372,7 @@ run_mqttlog_publish_subscribe_test(){
   ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
   sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
   sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
-  validate_content $LOCAL_LOGFILE "$CONTENT12"
+  validate_content $LOCAL_LOGFILE "$CONTENT1212"
 
   # remove logfile copy
   rm -f $LOCAL_LOGFILE

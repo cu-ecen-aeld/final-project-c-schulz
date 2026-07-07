@@ -2,22 +2,26 @@
 
 #include "mqttlog_ringbuf.h"
 
+// initialize ringbuffer
 void mqttlog_ringbuf_init(struct mqttlog_ringbuf *rb)
 {
     memset(rb,0,sizeof(struct mqttlog_ringbuf));
     // sets write_pos, read_pos and count to zero
 }
 
+// is ringbuffer empty?
 bool mqttlog_ringbuf_empty(const struct mqttlog_ringbuf *rb)
 {
     return rb && (rb->count == 0);
 }
 
+// is ringbuffer full?
 bool mqttlog_ringbuf_full(const struct mqttlog_ringbuf *rb)
 {
     return rb && (rb->count == MQTTLOG_RING_SIZE);
 }
 
+// add new entry, if necessary overwrite oldest entry
 int mqttlog_ringbuf_push(struct mqttlog_ringbuf *rb,
                          const struct mqttlog_entry *entry)
 {
@@ -40,6 +44,7 @@ int mqttlog_ringbuf_push(struct mqttlog_ringbuf *rb,
     return 0;
 }
 
+// return oldest entry
 int mqttlog_ringbuf_top(const struct mqttlog_ringbuf *rb,
                         struct mqttlog_entry *entry)
 {
@@ -55,6 +60,7 @@ int mqttlog_ringbuf_top(const struct mqttlog_ringbuf *rb,
     return 0;
 }
 
+// remove oldest entry
 void mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb)
 {
     if (!rb || mqttlog_ringbuf_empty(rb))
@@ -65,4 +71,82 @@ void mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb)
 
     // reduce the number of contained elements
     --rb->count;
+}
+
+// return sequence id at current read position
+int mqttlog_ringbuf_top_sequence(const struct mqttlog_ringbuf *rb,
+                                 u64* next_sequence)
+{
+    if (!rb || !next_sequence)
+        return -EINVAL;
+
+    if (mqttlog_ringbuf_empty(rb))
+        *next_sequence = 0;
+    else
+        *next_sequence = rb->entries[rb->read_pos].sequence;
+
+    return 0;
+}
+
+// return entry at specified position
+int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
+                                  u64* next_sequence,
+                                  struct mqttlog_entry *entry)
+{
+    size_t custom_read_pos;
+
+    if (!rb || !next_sequence)
+        return -EINVAL;
+
+    if (mqttlog_ringbuf_empty(rb))
+        return -ENOENT;
+
+    // search from read begin until specified sequence id is found
+    custom_read_pos = rb->read_pos;
+    do {
+        // if ringbuffer is already further than next sequence, skip a few
+        if (rb->entries[custom_read_pos].sequence > *next_sequence)
+            *next_sequence = rb->entries[custom_read_pos].sequence;
+
+        // found sequence id, return entry
+        if (rb->entries[custom_read_pos].sequence == *next_sequence) {
+            *entry = rb->entries[custom_read_pos];
+            return 0;
+        }
+
+        custom_read_pos = (custom_read_pos + 1) % MQTTLOG_RING_SIZE;
+    }
+    while (custom_read_pos != rb->write_pos);
+
+    // if entry with specified sequence id is not (yet) available, return ENOENT
+    return -ENOENT;
+
+
+    ////////
+
+    // // if no unread entries are available, return ENOENT
+    // if (custom_read_pos == rb->write_pos)
+    //     return -ENOENT;
+
+    // // return entry at given position, don't modify anything
+    // *entry = rb->entries[custom_read_pos];
+
+    // return 0;
+}
+
+// increase custom position pointer
+void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb,
+                                   u64* next_sequence)
+{
+    if (!rb || !next_sequence)
+        return;
+
+    // increase sequence id
+    ++(*next_sequence);
+
+    ////////
+
+    // // increase read pointer
+    // if (*custom_pos != rb->write_pos)
+    //     *custom_pos = (*custom_pos + 1) % MQTTLOG_RING_SIZE;
 }

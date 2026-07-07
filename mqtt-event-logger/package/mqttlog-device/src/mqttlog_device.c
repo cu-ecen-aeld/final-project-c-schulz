@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0
 
-#include <linux/module.h>       // MODULE_* macros
-#include <linux/init.h>         // module_init(), module_exit()
-#include <linux/device.h>       // class_create(), device_create()
-#include <linux/kernel.h>       // pr_info()
+#include <linux/module.h>           // MODULE_* macros
+#include <linux/init.h>             // module_init(), module_exit()
+#include <linux/device.h>           // class_create(), device_create()
+#include <linux/kernel.h>           // pr_info()
 
-#include "mqttlog_device.h"     // -> header containing device-level function decls
-#include "mqttlog_core.h"       // -> header containing read/write function decls
+#include "mqttlog_device.h"         // -> header containing device-level function decls
+#include "mqttlog_core.h"           // -> header containing read/write function decls
 
-#define DEVICE_NAME "mqttlog"   // -> module creates /dev/mqttlog device
+#define DEVICE_NAME "mqttlog"       // -> module creates /dev/mqttlog device
 
 
 // struct containing all device-specific structs for /dev/mqttlog
@@ -31,7 +31,7 @@ int mqttlog_device_init(void)
 
     // initialize mqttlog struct
     memset(&mqttlog,0,sizeof(struct mqttlog_dev));
-    mqttlog_init(&mqttlog);
+    mqttlog_init(&mqttlog);         // implemented in mqttlog_core.c
 
     // reserve a free major/minor number, returned via dev_num
     ret = alloc_chrdev_region(&mqttlog.dev_num, 0, 1, DEVICE_NAME);
