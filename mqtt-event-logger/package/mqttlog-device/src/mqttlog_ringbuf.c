@@ -40,7 +40,7 @@ int mqttlog_ringbuf_push(struct mqttlog_ringbuf *rb,
     return 0;
 }
 
-int mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb,
+int mqttlog_ringbuf_top(const struct mqttlog_ringbuf *rb,
                         struct mqttlog_entry *entry)
 {
     if (!rb)
@@ -49,12 +49,20 @@ int mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb,
     if (mqttlog_ringbuf_empty(rb))
         return -ENOENT;
 
-    // return oldest entry, increase read pointer
+    // return oldest entry, don't modify anything
     *entry = rb->entries[rb->read_pos];
+
+    return 0;
+}
+
+void mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb)
+{
+    if (!rb || mqttlog_ringbuf_empty(rb))
+        return;
+
+    // increase read pointer
     rb->read_pos = (rb->read_pos + 1) % MQTTLOG_RING_SIZE;
 
     // reduce the number of contained elements
     --rb->count;
-
-    return 0;
 }

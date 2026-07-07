@@ -52,8 +52,6 @@ ssize_t mqttlog_write(struct file *file,
     if (len == 0)
         return 0;
 
-
-    // 1) copy message into kernel space
     // allocate temporary kernel buffer (+1 for terminating '\0')
     kbuf = kmalloc(len + 1, GFP_KERNEL);
     if (!kbuf)
@@ -69,8 +67,6 @@ ssize_t mqttlog_write(struct file *file,
     // null-terminate string
     kbuf[len] = '\0';
 
-
-    // 2) parse and print message
     // parse the message and store it into a new entry
     memset(&entry, 0, sizeof(entry));
     ret = mqttlog_parse_message(kbuf, len, &entry);
@@ -87,8 +83,6 @@ ssize_t mqttlog_write(struct file *file,
     // print received message
     mqttlog_print_entry(&entry);
 
-
-    // 3) modify ringbuffer
     // get reader-specific cursor
     if (!(mqttlog = file->private_data))
         return -EFAULT;
@@ -105,7 +99,6 @@ ssize_t mqttlog_write(struct file *file,
         return ret;
     }
 
-    // 4) return
     // increase offset by number of written bytes
     *off += len;
 
@@ -120,16 +113,16 @@ ssize_t mqttlog_read(struct file *file,
 {
     struct mqttlog_entry entry;
     struct mqttlog_dev *mqttlog;
-    char out[MQTTLOG_MAX_STRING_LEN];
+    char out[len]; //[MQTTLOG_MAX_STRING_LEN];
+    char tmp[MQTTLOG_MAX_STRING_LEN];
     int out_len;
+    int tmp_len;
     int ret;
 
     // return EOF if this read has already been accomplished
     if (*off != 0)
         return 0;
 
-
-    // 1) fetch message from ringbuffer
     // get reader-specific cursor
     if (!(mqttlog = file->private_data))
         return -EFAULT;
@@ -138,34 +131,52 @@ ssize_t mqttlog_read(struct file *file,
     if (mutex_lock_interruptible(&mqttlog->mutex) != 0)
         return -EFAULT;
 
-    // retreive oldest message from ringbuffer
-    ret = mqttlog_ringbuf_pop(&mqttlog->ringbuf, &entry);
-    mutex_unlock(&mqttlog->mutex);
-    if (ret) {
-        pr_err("mqttlog: error fetching entry from ringbuffer\n");
-        return ret;
+    // fetch messages from ringbuffer until user buffer is full or ringbuffer empty
+    out_len = 0;
+    while (!mqttlog_ringbuf_empty(&mqttlog->ringbuf)) {
+
+        // retreive oldest message from ringbuffer
+        ret = mqttlog_ringbuf_top(&mqttlog->ringbuf, &entry);
+        if (ret) {
+            pr_err("mqttlog: error fetching entry from ringbuffer\n");
+            mutex_unlock(&mqttlog->mutex);
+            return ret;
+        }
+
+        // convert message to string
+        tmp_len = mqttlog_format_entry(&entry, tmp, sizeof(tmp));
+        if (tmp_len < 0) {
+            pr_err("mqttlog: error formatting entry\n");
+            mutex_unlock(&mqttlog->mutex);
+            return tmp_len;
+        }
+
+        // check if message fits into user buffer
+        if (out_len + tmp_len > len)
+            break;
+
+        // copy string to buffer for copying to user
+        memcpy(out + out_len, tmp, tmp_len);
+        out_len += tmp_len;
+
+        // actually pop message from ringbuffer
+        mqttlog_ringbuf_pop(&mqttlog->ringbuf);
     }
 
+    // unlock ringbuffer mutex because all modification is finished
+    mutex_unlock(&mqttlog->mutex);
 
-    // 2) convert message to string
-    // convert mqttlog entry to string
-    out_len = mqttlog_format_entry(&entry, out, sizeof(out));
+    // if not even the first message fit into buffer, return no space error
+    if (out_len == 0)
+        return -ENOSPC;
 
-
-    // 3) copy message into user space
-    // if message does not fit into buffer, return error
-    if (out_len > len)
-        return -EINVAL;
-
-    // copy message to buffer
+    // copy message into user space buffer
     ret = copy_to_user(buf, out, out_len);
     if (ret) {
         pr_err("mqttlog: error copying ringbuffer entry to user\n");
-        return ret; // -EFAULT;
+        return ret;
     }
 
-
-    // 4) return
     // increase offset by number of read bytes
     *off += out_len;
 
