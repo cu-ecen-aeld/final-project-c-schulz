@@ -246,7 +246,7 @@ run_mqttlog_cat_test(){
   topic    : test-topic3,
   payload  : {"A": 2, "B": 3, "C": 0}
 }'
-  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  ssh_cmd "head -n18 $MQTT_DEVICE" > $LOCAL_LOGFILE
   sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
   sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
 
@@ -274,7 +274,7 @@ run_mqttlog_buffer_size_test(){
   sync
 
   # obtain first sequence id remaining in ringbuffer
-  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  ssh_cmd "head -n2 $MQTT_DEVICE" > $LOCAL_LOGFILE
   SEQ_FIRST=$(egrep sequence $LOCAL_LOGFILE | head -n 1 | awk '{print $3}' | cut -d , -f 1)
   SEQ_FIRST=$(echo "$SEQ_FIRST - 1" | bc)   # -1 because this is already one of our 150 messages
 
@@ -330,8 +330,8 @@ run_mqttlog_publish_subscribe_test(){
   CONTENT1212="$CONTENT12
 $CONTENT12"
 
-  # clear ringbuffer
-  ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
+  # # clear ringbuffer
+  # ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
 
   # publish first test message
   print $NC "Publishing first message..."
@@ -339,7 +339,7 @@ $CONTENT12"
   validate $?
 
   print $NC "Validating first message..."
-  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  ssh_cmd "head -n6 $MQTT_DEVICE" > $LOCAL_LOGFILE
   sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
   sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT1"
@@ -350,7 +350,7 @@ $CONTENT12"
   validate $?
 
   print $NC "Validating second message..."
-  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  ssh_cmd "head -n12 $MQTT_DEVICE" > $LOCAL_LOGFILE
   sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
   sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT12"
@@ -364,7 +364,7 @@ $CONTENT12"
 
   # validate resulting content
   print $NC "Validating both messages..."
-  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  ssh_cmd "head -n24 $MQTT_DEVICE" > $LOCAL_LOGFILE
   sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
   sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT1212"
