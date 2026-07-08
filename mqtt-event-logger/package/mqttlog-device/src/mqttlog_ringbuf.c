@@ -114,6 +114,7 @@ int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
             return 0;
         }
 
+        // advance to next position in ringbuffer
         custom_read_pos = (custom_read_pos + 1) % MQTTLOG_RING_SIZE;
     }
     while (custom_read_pos != rb->write_pos);

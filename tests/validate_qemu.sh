@@ -262,34 +262,29 @@ run_mqttlog_buffer_size_test(){
   LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
   rm -f $LOCAL_LOGFILE
 
+  # clear ringbuffer
+  # TODO
+  ssh_cmd "/etc/init.d/S98mqttlog restart"
+
   # ringbuffer size is 128, so we push >128 elements
-  for i in {1..150}; do
+  for i in {0..150}; do
     ssh_cmd "echo '{ \"topic\": \"test-topic\", \"payload\": 123 }' > $MQTT_DEVICE"
     validate $?
   done
   sync
 
+  # obtain first sequence id remaining in ringbuffer
+  ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE
+  SEQ_FIRST=$(egrep sequence $LOCAL_LOGFILE | head -n 1 | awk '{print $3}' | cut -d , -f 1)
+  SEQ_FIRST=$(echo "$SEQ_FIRST - 1" | bc)   # -1 because this is already one of our 150 messages
 
-  # OLD AND DEPRECATED:
-  # # execute cat in a loop after provoking overflow
-  # # required multiple times because buffer is too small for all messages
-  # while ssh_cmd "cat $MQTT_DEVICE" > $LOCAL_LOGFILE; do
-  #   if [ -z $SEQ_FIRST ]; then
-  #     SEQ_FIRST=$(egrep sequence $LOCAL_LOGFILE | head -n 1 | awk '{print $3}' | cut -d , -f 1)
-  #     SEQ_FIRST=$(echo "$SEQ_FIRST - 1" | bc)   # -1 because this is already one of our 150 messages
-  #   fi
-  #   SEQ_LAST=$(egrep sequence $LOCAL_LOGFILE | tail -n 1 | awk '{print $3}' | cut -d , -f 1)
-  # done
+  # last sequence id equals iteration number because mqttlog was restarted
+  SEQ_LAST=150
+  print $NC "Sequence ids: $SEQ_FIRST - $SEQ_LAST"
 
-
-  # TODO:
-  # execute custom program 'mqttlog_dump' to retreive all messages currently stored in ringbuffer
-
-  # print $NC "Sequence ids: $SEQ_FIRST - $SEQ_LAST"
-
-  # print $NC "Validating sequence ids..."
-  # [ $(echo "$SEQ_LAST - $SEQ_FIRST" | bc) -eq 128 ]
-  # validate $?
+  print $NC "Validating sequence ids..."
+  [ $(echo "$SEQ_LAST - $SEQ_FIRST" | bc) -eq 128 ]
+  validate $?
 
   # remove logfile copy
   rm -f $LOCAL_LOGFILE
