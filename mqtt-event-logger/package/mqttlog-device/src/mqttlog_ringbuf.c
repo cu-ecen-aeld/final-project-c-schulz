@@ -121,18 +121,6 @@ int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
 
     // if entry with specified sequence id is not (yet) available, return ENOENT
     return -ENOENT;
-
-
-    ////////
-
-    // // if no unread entries are available, return ENOENT
-    // if (custom_read_pos == rb->write_pos)
-    //     return -ENOENT;
-
-    // // return entry at given position, don't modify anything
-    // *entry = rb->entries[custom_read_pos];
-
-    // return 0;
 }
 
 // increase custom position pointer
@@ -144,10 +132,29 @@ void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb,
 
     // increase sequence id
     ++(*next_sequence);
+}
 
-    ////////
+// check whether ringbuffer has data to provide
+bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb,
+                              const u64 next_sequence)
+{
+    size_t custom_read_pos;
 
-    // // increase read pointer
-    // if (*custom_pos != rb->write_pos)
-    //     *custom_pos = (*custom_pos + 1) % MQTTLOG_RING_SIZE;
+    if (!rb || mqttlog_ringbuf_empty(rb))
+        return false;
+
+    // search from read begin until specified sequence id is found
+    custom_read_pos = rb->read_pos;
+    do {
+        // if sequence id is found or sequence ids need to be skipped, return true
+        if (rb->entries[custom_read_pos].sequence >= next_sequence)
+            return true;
+
+        // advance to next position in ringbuffer
+        custom_read_pos = (custom_read_pos + 1) % MQTTLOG_RING_SIZE;
+    }
+    while (custom_read_pos != rb->write_pos);
+
+    // if entry with specified sequence id is not (yet) available, return false
+    return false;
 }

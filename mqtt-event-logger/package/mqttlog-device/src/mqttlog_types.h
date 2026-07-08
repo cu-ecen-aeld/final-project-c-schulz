@@ -7,6 +7,7 @@
 #include <linux/fs.h>               // struct file, inode, file_operations
 #include <linux/cdev.h>             // struct cdev
 #include <linux/mutex.h>            // struct mutex
+#include <linux/wait.h>             // struct wait_queue_head_t
 
 
 // struct defining an entry of the ringbuffer
@@ -57,6 +58,9 @@ struct mqttlog_dev {
     // actual data
     struct mqttlog_ringbuf ringbuf; // ringbuffer
     struct mutex mutex;             // mutex protecting ringbuffer
+
+    // wait queue for blocking reads
+    wait_queue_head_t read_queue;
 };
 
 
