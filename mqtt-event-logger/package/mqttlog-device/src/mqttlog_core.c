@@ -110,8 +110,11 @@ ssize_t mqttlog_write(struct file *file,
         return -EFAULT;
 
     // lock ringbuffer mutex
-    if (mutex_lock_interruptible(&ctx->mqttlog->mutex) != 0)
-        return -EFAULT;
+    ret = mutex_lock_interruptible(&ctx->mqttlog->mutex);
+    if (ret) {              // should be -RESTARTSYS
+        pr_debug("mqttlog: aborted while locking mutex\n");
+        return ret;
+    }
 
     // insert received message into ringbuffer
     ret = mqttlog_ringbuf_push(&ctx->mqttlog->ringbuf, &entry);
@@ -162,15 +165,18 @@ ssize_t mqttlog_read(struct file *file,
             mqttlog_ringbuf_has_data(&ctx->mqttlog->ringbuf, ctx->next_sequence));
 
         if (ret) {          // -RESTARTSYS received
-            pr_info("mqttlog: aborted while waiting for wakeup\n");
+            pr_debug("mqttlog: aborted while waiting for wakeup\n");
             return ret;
         }
     }
 
     // lock ringbuffer mutex
     // don't lock before, combination with wait might provoke deadlocks
-    if (mutex_lock_interruptible(&ctx->mqttlog->mutex) != 0)
-        return -EFAULT;
+    ret = mutex_lock_interruptible(&ctx->mqttlog->mutex);
+    if (ret) {              // should be -RESTARTSYS
+        pr_debug("mqttlog: aborted while locking mutex\n");
+        return ret;
+    }
 
     // fetch messages from ringbuffer until user buffer is full or everything was read
     out_len = 0;
