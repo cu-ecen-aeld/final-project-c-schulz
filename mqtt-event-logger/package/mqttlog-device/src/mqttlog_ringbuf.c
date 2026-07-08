@@ -75,7 +75,7 @@ void mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb)
 
 // return sequence id at current read position
 int mqttlog_ringbuf_top_sequence(const struct mqttlog_ringbuf *rb,
-                                 u64* next_sequence)
+                                 uint64_t* next_sequence)
 {
     if (!rb || !next_sequence)
         return -EINVAL;
@@ -90,7 +90,7 @@ int mqttlog_ringbuf_top_sequence(const struct mqttlog_ringbuf *rb,
 
 // return entry at specified position
 int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
-                                  u64* next_sequence,
+                                  uint64_t* next_sequence,
                                   struct mqttlog_entry *entry)
 {
     size_t custom_read_pos;
@@ -125,7 +125,7 @@ int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
 
 // increase custom position pointer
 void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb,
-                                   u64* next_sequence)
+                                   uint64_t* next_sequence)
 {
     if (!rb || !next_sequence)
         return;
@@ -136,7 +136,7 @@ void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb,
 
 // check whether ringbuffer has data to provide
 bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb,
-                              const u64 next_sequence)
+                              const uint64_t next_sequence)
 {
     size_t custom_read_pos;
 

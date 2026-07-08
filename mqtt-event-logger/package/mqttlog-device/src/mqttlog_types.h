@@ -14,7 +14,7 @@
 #define MQTTLOG_MAX_TOPIC_LEN    128
 #define MQTTLOG_MAX_PAYLOAD_LEN 1024
 struct mqttlog_entry {
-    u64 sequence;
+    uint64_t sequence;
     ktime_t timestamp;
 
     char topic[MQTTLOG_MAX_TOPIC_LEN];
@@ -67,7 +67,7 @@ struct mqttlog_dev {
 // struct containing reader-specific information
 struct mqttlog_file {
     struct mqttlog_dev *mqttlog;
-    u64 next_sequence;
+    uint64_t next_sequence;
 };
 
 #endif // MQTTLOG_TYPES_H
