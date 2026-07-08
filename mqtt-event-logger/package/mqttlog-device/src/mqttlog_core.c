@@ -226,3 +226,25 @@ ssize_t mqttlog_read(struct file *file,
 
     return out_len;
 }
+
+// poll device
+__poll_t mqttlog_poll(struct file *file,
+                      poll_table *wait)
+{
+    struct mqttlog_file *ctx;
+    __poll_t mask = 0;
+
+    // get reader-specific cursor
+    if (!(ctx = file->private_data))
+        return mask;
+
+    // register this file with the wait queue
+    // if no data is available, poll will sleep here
+    poll_wait(file, &ctx->mqttlog->read_queue, wait);
+
+    // check whether ringbuffer has data to read and set poll flags
+    if (mqttlog_ringbuf_has_data(&ctx->mqttlog->ringbuf, ctx->next_sequence))
+        mask |= POLLIN | POLLRDNORM;
+
+    return mask;
+}

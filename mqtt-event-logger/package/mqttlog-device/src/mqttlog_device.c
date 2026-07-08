@@ -21,6 +21,7 @@ const struct file_operations mqttlog_fops = {
     .release = mqttlog_release,
     .read    = mqttlog_read,
     .write   = mqttlog_write,
+    .poll    = mqttlog_poll,
     .llseek  = noop_llseek,         // don't support seek (e.g. tail)
 };
 
