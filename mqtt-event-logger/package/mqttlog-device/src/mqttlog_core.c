@@ -137,10 +137,6 @@ ssize_t mqttlog_read(struct file *file,
     int tmp_len;
     int ret;
 
-    // return EOF if this read has already been accomplished
-    if (*off != 0)
-        return 0;
-
     // get reader-specific cursor
     if (!(ctx = file->private_data))
         return -EFAULT;
