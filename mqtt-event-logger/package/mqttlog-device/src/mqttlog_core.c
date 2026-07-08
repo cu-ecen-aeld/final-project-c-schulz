@@ -11,8 +11,9 @@
 // init struct
 void mqttlog_init(struct mqttlog_dev *mqttlog)
 {
-    // initialize ringbuffer
+    // initialize ringbuffer aand mutex
     mqttlog_ringbuf_init(&mqttlog->ringbuf);
+    mutex_init(&mqttlog->mutex);
 
     // initialize wait queue
     init_waitqueue_head(&mqttlog->read_queue);
@@ -147,15 +148,10 @@ ssize_t mqttlog_read(struct file *file,
     if (!(ctx = file->private_data))
         return -EFAULT;
 
-    // lock ringbuffer mutex
-    if (mutex_lock_interruptible(&ctx->mqttlog->mutex) != 0)
-        return -EFAULT;
-
     // non-blocking mode:
     // if no data is available, return immediately
     if (file->f_flags & O_NONBLOCK) {
         if (!mqttlog_ringbuf_has_data(&ctx->mqttlog->ringbuf, ctx->next_sequence)) {
-            mutex_unlock(&ctx->mqttlog->mutex);
             return -EAGAIN;
         }
     }
@@ -166,11 +162,15 @@ ssize_t mqttlog_read(struct file *file,
             mqttlog_ringbuf_has_data(&ctx->mqttlog->ringbuf, ctx->next_sequence));
 
         if (ret) {          // -RESTARTSYS received
-            pr_err("mqttlog: error waiting for wakeup\n");
-            mutex_unlock(&ctx->mqttlog->mutex);
+            pr_info("mqttlog: aborted while waiting for wakeup\n");
             return ret;
         }
     }
+
+    // lock ringbuffer mutex
+    // don't lock before, combination with wait might provoke deadlocks
+    if (mutex_lock_interruptible(&ctx->mqttlog->mutex) != 0)
+        return -EFAULT;
 
     // fetch messages from ringbuffer until user buffer is full or everything was read
     out_len = 0;
