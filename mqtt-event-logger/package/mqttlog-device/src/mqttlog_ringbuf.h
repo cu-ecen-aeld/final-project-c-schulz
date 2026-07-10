@@ -18,10 +18,11 @@ int  mqttlog_ringbuf_push(struct mqttlog_ringbuf *rb, const struct mqttlog_entry
 int  mqttlog_ringbuf_top(const struct mqttlog_ringbuf *rb, struct mqttlog_entry *entry);
 void mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb);
 
-// operations with custom read pointer (points to next sequence id)
-int  mqttlog_ringbuf_top_sequence(const struct mqttlog_ringbuf *rb, __u64* next_sequence);
-int  mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb, __u64* next_sequence, struct mqttlog_entry *entry);
-void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb, __u64* next_sequence);
-bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb, const __u64 next_sequence);
+// operations with custom read pointer (points to next sequence id) or custom topic filter
+int  mqttlog_ringbuf_top_sequence(const struct mqttlog_ringbuf *rb, __u64 *cursor);
+int  mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb, __u64 *cursor, const char *topic_filter, struct mqttlog_entry *entry);
+void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb, __u64 *cursor);
+bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb, const __u64 cursor, const char *topic_filter);
+bool mqttlog_topic_matches(const char *topic_filter, const char *topic);
 
 #endif // MQTTLOG_RINGBUF_H

@@ -11,7 +11,7 @@
 // init struct
 void mqttlog_init(struct mqttlog_dev *mqttlog)
 {
-    // initialize ringbuffer aand mutex
+    // initialize ringbuffer and mutex
     mqttlog_ringbuf_init(&mqttlog->ringbuf);
     mutex_init(&mqttlog->mutex);
 
@@ -23,22 +23,27 @@ void mqttlog_init(struct mqttlog_dev *mqttlog)
 int mqttlog_open(struct inode *inode, struct file *file)
 {
     pr_info("mqttlog: open\n");
-    struct mqttlog_file *ctx;
+    struct mqttlog_file *reader;
     int ret;
 
-    // allocate reader-specific structure
-    ctx = kmalloc(sizeof(*ctx), GFP_KERNEL);
-    if (!ctx)
+    // allocate reader-specific structure, initialize to zero
+    reader = kzalloc(sizeof(*reader), GFP_KERNEL);
+    if (!reader)
         return -ENOMEM;
 
-    // assign global mqttlog_dev member and initialize read position
-    ctx->mqttlog = container_of(inode->i_cdev, struct mqttlog_dev, cdev);
-    ret = mqttlog_ringbuf_top_sequence(&ctx->mqttlog->ringbuf, &ctx->next_sequence);
+    // assign global mqttlog_dev member
+    reader->mqttlog = container_of(inode->i_cdev, struct mqttlog_dev, cdev);
+
+    // initialize custom read position
+    ret = mqttlog_ringbuf_top_sequence(&reader->mqttlog->ringbuf, &reader->cursor);
     if (ret)
         return ret;
 
+    // initialize topic filter as empty (redundant with kzalloc)
+    reader->topic_filter[0] = '\0';
+
     // store in reader-specific private data
-    file->private_data = ctx;
+    file->private_data = reader;
 
     return 0;
 }
@@ -47,11 +52,11 @@ int mqttlog_open(struct inode *inode, struct file *file)
 int mqttlog_release(struct inode *inode, struct file *file)
 {
     pr_info("mqttlog: close\n");
-    struct mqttlog_file *ctx;
+    struct mqttlog_file *reader;
 
     // reset reader-specific structure
-    ctx = file->private_data;
-    kfree(ctx);
+    reader = file->private_data;
+    kfree(reader);
 
     // reset reader-specific private data to nullptr
     file->private_data = NULL;
@@ -66,7 +71,7 @@ ssize_t mqttlog_write(struct file *file,
                       loff_t *off)
 {
     struct mqttlog_entry entry;
-    struct mqttlog_file *ctx;
+    struct mqttlog_file *reader;
     char *kbuf;
     int ret;
 
@@ -106,26 +111,26 @@ ssize_t mqttlog_write(struct file *file,
     mqttlog_print_entry(&entry);
 
     // get reader-specific structure
-    if (!(ctx = file->private_data) || !ctx->mqttlog)
+    if (!(reader = file->private_data) || !reader->mqttlog)
         return -EFAULT;
 
     // lock ringbuffer mutex
-    ret = mutex_lock_interruptible(&ctx->mqttlog->mutex);
+    ret = mutex_lock_interruptible(&reader->mqttlog->mutex);
     if (ret) {              // should be -RESTARTSYS
         pr_debug("mqttlog: aborted while locking mutex\n");
         return ret;
     }
 
     // insert received message into ringbuffer
-    ret = mqttlog_ringbuf_push(&ctx->mqttlog->ringbuf, &entry);
-    mutex_unlock(&ctx->mqttlog->mutex);
+    ret = mqttlog_ringbuf_push(&reader->mqttlog->ringbuf, &entry);
+    mutex_unlock(&reader->mqttlog->mutex);
     if (ret) {
         pr_err("mqttlog: error pushing entry to ringbuffer\n");
         return ret;
     }
 
     // wake up reader
-    wake_up_interruptible(&ctx->mqttlog->read_queue);
+    wake_up_interruptible(&reader->mqttlog->read_queue);
 
     // increase offset by number of written bytes
     *off += len;
@@ -140,7 +145,7 @@ ssize_t mqttlog_read(struct file *file,
                      loff_t *off)
 {
     struct mqttlog_entry entry;
-    struct mqttlog_file *ctx;
+    struct mqttlog_file *reader;
     char out[len]; //[MQTTLOG_MAX_BUFFER_LEN];
     char tmp[MQTTLOG_MAX_STRING_LEN];
     int out_len;
@@ -148,21 +153,21 @@ ssize_t mqttlog_read(struct file *file,
     int ret;
 
     // get reader-specific structure
-    if (!(ctx = file->private_data) || !ctx->mqttlog)
+    if (!(reader = file->private_data) || !reader->mqttlog)
         return -EFAULT;
 
     // non-blocking mode:
     // if no data is available, return immediately
     if (file->f_flags & O_NONBLOCK) {
-        if (!mqttlog_ringbuf_has_data(&ctx->mqttlog->ringbuf, ctx->next_sequence)) {
+        if (!mqttlog_ringbuf_has_data(&reader->mqttlog->ringbuf, reader->cursor, reader->topic_filter)) {
             return -EAGAIN;
         }
     }
     // blocking mode:
     // sleep until ringbuffer has new data
     else {
-        ret = wait_event_interruptible(ctx->mqttlog->read_queue,
-            mqttlog_ringbuf_has_data(&ctx->mqttlog->ringbuf, ctx->next_sequence));
+        ret = wait_event_interruptible(reader->mqttlog->read_queue,
+            mqttlog_ringbuf_has_data(&reader->mqttlog->ringbuf, reader->cursor, reader->topic_filter));
 
         if (ret) {          // -RESTARTSYS received
             pr_debug("mqttlog: aborted while waiting for wakeup\n");
@@ -172,7 +177,7 @@ ssize_t mqttlog_read(struct file *file,
 
     // lock ringbuffer mutex
     // don't lock before, combination with wait might provoke deadlocks
-    ret = mutex_lock_interruptible(&ctx->mqttlog->mutex);
+    ret = mutex_lock_interruptible(&reader->mqttlog->mutex);
     if (ret) {              // should be -RESTARTSYS
         pr_debug("mqttlog: aborted while locking mutex\n");
         return ret;
@@ -182,13 +187,13 @@ ssize_t mqttlog_read(struct file *file,
     out_len = 0;
     while (true) {
 
-        // retreive message from ringbuffer, use reader-specific read pointer
-        ret = mqttlog_ringbuf_read_sequence(&ctx->mqttlog->ringbuf, &ctx->next_sequence, &entry);
+        // retreive message from ringbuffer, use reader-specific read pointer and topic filter
+        ret = mqttlog_ringbuf_read_sequence(&reader->mqttlog->ringbuf, &reader->cursor, reader->topic_filter, &entry);
         if (ret == -ENOENT) // nothing left to read
             break;
         if (ret) {          // other error
             pr_err("mqttlog: error fetching entry from ringbuffer\n");
-            mutex_unlock(&ctx->mqttlog->mutex);
+            mutex_unlock(&reader->mqttlog->mutex);
             return ret;
         }
 
@@ -196,7 +201,7 @@ ssize_t mqttlog_read(struct file *file,
         tmp_len = mqttlog_format_entry(&entry, tmp, sizeof(tmp));
         if (tmp_len < 0) {
             pr_err("mqttlog: error formatting entry\n");
-            mutex_unlock(&ctx->mqttlog->mutex);
+            mutex_unlock(&reader->mqttlog->mutex);
             return tmp_len;
         }
 
@@ -210,11 +215,11 @@ ssize_t mqttlog_read(struct file *file,
 
         // don't modify ringbuffer, only modify reader-specific read pointer
         // this step is done here s.t. no data gets lost in case buffer is too small
-        mqttlog_ringbuf_next_sequence(&ctx->mqttlog->ringbuf, &ctx->next_sequence);
+        mqttlog_ringbuf_next_sequence(&reader->mqttlog->ringbuf, &reader->cursor);
     }
 
     // unlock ringbuffer mutex because all modification is finished
-    mutex_unlock(&ctx->mqttlog->mutex);
+    mutex_unlock(&reader->mqttlog->mutex);
 
     // if not even the first message fit into buffer, return no space error
     if (out_len == 0)
@@ -237,19 +242,19 @@ ssize_t mqttlog_read(struct file *file,
 __poll_t mqttlog_poll(struct file *file,
                       poll_table *wait)
 {
-    struct mqttlog_file *ctx;
+    struct mqttlog_file *reader;
     __poll_t mask = 0;
 
     // get reader-specific structure
-    if (!(ctx = file->private_data) || !ctx->mqttlog)
+    if (!(reader = file->private_data) || !reader->mqttlog)
         return mask;
 
     // register this file with the wait queue
     // if no data is available, poll will sleep here
-    poll_wait(file, &ctx->mqttlog->read_queue, wait);
+    poll_wait(file, &reader->mqttlog->read_queue, wait);
 
     // check whether ringbuffer has data to read and set poll flags
-    if (mqttlog_ringbuf_has_data(&ctx->mqttlog->ringbuf, ctx->next_sequence))
+    if (mqttlog_ringbuf_has_data(&reader->mqttlog->ringbuf, reader->cursor, reader->topic_filter))
         mask |= POLLIN | POLLRDNORM;
 
     return mask;

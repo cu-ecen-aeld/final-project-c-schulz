@@ -45,10 +45,10 @@ void mqttlog_ringbuf_stats(const struct mqttlog_ringbuf *rb,
 
     memset(stats, 0, sizeof(*stats));
 
-    stats.events_written = rb->total_written;
-    stats.events_dropped = rb->total_dropped;
-    stats.buffer_size    = MQTTLOG_RING_SIZE;
-    stats.buffer_used    = rb->count;
+    stats->events_written = rb->total_written;
+    stats->events_dropped = rb->total_dropped;
+    stats->buffer_size    = MQTTLOG_RING_SIZE;
+    stats->buffer_used    = rb->count;
 }
 
 // add new entry, if necessary overwrite oldest entry
@@ -108,27 +108,29 @@ void mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb)
 
 // return sequence id at current read position
 int mqttlog_ringbuf_top_sequence(const struct mqttlog_ringbuf *rb,
-                                 __u64* next_sequence)
+                                 __u64 *cursor)
 {
-    if (!rb || !next_sequence)
+    if (!rb || !cursor)
         return -EINVAL;
 
     if (mqttlog_ringbuf_empty(rb))
-        *next_sequence = 0;
+        *cursor = 0;
     else
-        *next_sequence = rb->entries[rb->read_pos].sequence;
+        *cursor = rb->entries[rb->read_pos].sequence;
 
     return 0;
 }
 
 // return entry at specified position
 int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
-                                  __u64* next_sequence,
+                                  __u64 *cursor,
+                                  const char *topic_filter,
                                   struct mqttlog_entry *entry)
 {
     size_t custom_read_pos;
+    const struct mqttlog_entry* candidate;
 
-    if (!rb || !next_sequence)
+    if (!rb || !cursor)
         return -EINVAL;
 
     if (mqttlog_ringbuf_empty(rb))
@@ -137,14 +139,18 @@ int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
     // search from read begin until specified sequence id is found
     custom_read_pos = rb->read_pos;
     do {
-        // if ringbuffer is already further than next sequence, skip a few
-        if (rb->entries[custom_read_pos].sequence > *next_sequence)
-            *next_sequence = rb->entries[custom_read_pos].sequence;
+        candidate = &rb->entries[custom_read_pos];
 
-        // found sequence id, return entry
-        if (rb->entries[custom_read_pos].sequence == *next_sequence) {
-            *entry = rb->entries[custom_read_pos];
-            return 0;
+        // if ringbuffer is already further than next sequence, skip a few
+        if (candidate->sequence > *cursor)
+            *cursor = candidate->sequence;
+
+        // found sequence id, return entry if topic matches filter
+        if (candidate->sequence == *cursor) {
+            if (mqttlog_topic_matches(topic_filter, candidate->topic)) {
+                *entry = *candidate;
+                return 0;
+            }
         }
 
         // advance to next position in ringbuffer
@@ -158,18 +164,19 @@ int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
 
 // increase custom position pointer
 void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb,
-                                   __u64* next_sequence)
+                                   __u64 *cursor)
 {
-    if (!rb || !next_sequence)
+    if (!rb || !cursor)
         return;
 
     // increase sequence id
-    ++(*next_sequence);
+    ++(*cursor);
 }
 
 // check whether ringbuffer has data to provide
 bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb,
-                              const __u64 next_sequence)
+                              const __u64 cursor,
+                              const char *topic_filter)
 {
     size_t custom_read_pos;
 
@@ -179,9 +186,11 @@ bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb,
     // search from read begin until specified sequence id is found
     custom_read_pos = rb->read_pos;
     do {
-        // if sequence id is found or sequence ids need to be skipped, return true
-        if (rb->entries[custom_read_pos].sequence >= next_sequence)
-            return true;
+        // if sequence id is found or sequence ids need to be skipped, return true if topic matches filter
+        if (rb->entries[custom_read_pos].sequence >= cursor) {
+            if (mqttlog_topic_matches(topic_filter, rb->entries[custom_read_pos].topic))
+                return true;
+        }
 
         // advance to next position in ringbuffer
         custom_read_pos = (custom_read_pos + 1) % MQTTLOG_RING_SIZE;
@@ -190,4 +199,19 @@ bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb,
 
     // if entry with specified sequence id is not (yet) available, return false
     return false;
+}
+
+bool mqttlog_topic_matches(const char *topic_filter,
+                           const char *topic)
+{
+    if (!topic_filter || !topic)
+        return false;
+
+    // if filter is empty, any topic matches
+    if (topic_filter[0] == '\0')
+        return true;
+
+    // compare filter and topic strings
+    // strcmp does exact match, no wildcard match
+    return (strcmp(topic_filter, topic) == 0);
 }

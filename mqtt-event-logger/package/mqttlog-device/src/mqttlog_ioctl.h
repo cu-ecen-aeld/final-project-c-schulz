@@ -39,8 +39,8 @@ struct mqttlog_topic_filter {
 
 // actual IOCTL implementation
 long mqttlog_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
-long mqttlog_ioctl_set_topic_filter(struct mqttlog_file *ctx, void __user *arg);
-long mqttlog_ioctl_reset_ringbuffer(struct mqttlog_file *ctx);
-long mqttlog_ioctl_get_stats       (struct mqttlog_file *ctx, void __user *arg);
+long mqttlog_ioctl_set_topic_filter(struct mqttlog_file *reader, void __user *arg);
+long mqttlog_ioctl_reset_ringbuffer(struct mqttlog_file *reader);
+long mqttlog_ioctl_get_stats       (struct mqttlog_file *reader, void __user *arg);
 
 #endif // MQTTLOG_IOCTL_H

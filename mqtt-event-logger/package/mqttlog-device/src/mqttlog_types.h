@@ -73,7 +73,7 @@ struct mqttlog_file {
     struct mqttlog_dev *mqttlog;    // device information
 
     // reader-specific data
-    __u64 next_sequence;            // next sequence id to read
+    __u64 cursor;                   // next sequence id to read
     char topic_filter[MQTTLOG_MAX_TOPIC_LEN];
 };
 
