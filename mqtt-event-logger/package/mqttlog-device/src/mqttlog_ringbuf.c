@@ -6,7 +6,22 @@
 void mqttlog_ringbuf_init(struct mqttlog_ringbuf *rb)
 {
     memset(rb,0,sizeof(struct mqttlog_ringbuf));
-    // sets write_pos, read_pos and count to zero
+    // sets write_pos, read_pos, count, total_written and total_dropped to zero
+}
+
+// reset ringbuffer
+void mqttlog_ringbuf_reset(struct mqttlog_ringbuf *rb)
+{
+    // reset entries
+    memset(rb->entries,0,sizeof(rb->entries));
+
+    // reset write_pos, read_pos and count
+    rb->write_pos = 0;
+    rb->read_pos  = 0;
+    rb->count     = 0;
+
+    // don't reset global sequence number
+    // don't reset total_written and total_dropped
 }
 
 // is ringbuffer empty?
@@ -21,6 +36,21 @@ bool mqttlog_ringbuf_full(const struct mqttlog_ringbuf *rb)
     return rb && (rb->count == MQTTLOG_RING_SIZE);
 }
 
+// return statistics
+void mqttlog_ringbuf_stats(const struct mqttlog_ringbuf *rb,
+                           struct mqttlog_stats *stats)
+{
+    if (!rb || !stats)
+        return;
+
+    memset(stats, 0, sizeof(*stats));
+
+    stats.events_written = rb->total_written;
+    stats.events_dropped = rb->total_dropped;
+    stats.buffer_size    = MQTTLOG_RING_SIZE;
+    stats.buffer_used    = rb->count;
+}
+
 // add new entry, if necessary overwrite oldest entry
 int mqttlog_ringbuf_push(struct mqttlog_ringbuf *rb,
                          const struct mqttlog_entry *entry)
@@ -31,11 +61,14 @@ int mqttlog_ringbuf_push(struct mqttlog_ringbuf *rb,
     // add new entry to the ringbuffer, increase write pointer
     rb->entries[rb->write_pos] = *entry;
     rb->write_pos = (rb->write_pos + 1) % MQTTLOG_RING_SIZE;
+    ++rb->total_written;        // stats: one more message was received
 
     // if ringbuffer is full, oldest entry is implicitly overwritten
     // in that case, also increase read pointer to the next newest entry
-    if (mqttlog_ringbuf_full(rb))
+    if (mqttlog_ringbuf_full(rb)) {
         rb->read_pos = (rb->read_pos + 1) % MQTTLOG_RING_SIZE;
+        ++rb->total_dropped;    // stats: one more message was overwritten/dropped
+    }
 
     // otherwise increase the number of contained elements
     else
@@ -75,7 +108,7 @@ void mqttlog_ringbuf_pop(struct mqttlog_ringbuf *rb)
 
 // return sequence id at current read position
 int mqttlog_ringbuf_top_sequence(const struct mqttlog_ringbuf *rb,
-                                 uint64_t* next_sequence)
+                                 __u64* next_sequence)
 {
     if (!rb || !next_sequence)
         return -EINVAL;
@@ -90,7 +123,7 @@ int mqttlog_ringbuf_top_sequence(const struct mqttlog_ringbuf *rb,
 
 // return entry at specified position
 int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
-                                  uint64_t* next_sequence,
+                                  __u64* next_sequence,
                                   struct mqttlog_entry *entry)
 {
     size_t custom_read_pos;
@@ -125,7 +158,7 @@ int mqttlog_ringbuf_read_sequence(const struct mqttlog_ringbuf *rb,
 
 // increase custom position pointer
 void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb,
-                                   uint64_t* next_sequence)
+                                   __u64* next_sequence)
 {
     if (!rb || !next_sequence)
         return;
@@ -136,7 +169,7 @@ void mqttlog_ringbuf_next_sequence(const struct mqttlog_ringbuf *rb,
 
 // check whether ringbuffer has data to provide
 bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb,
-                              const uint64_t next_sequence)
+                              const __u64 next_sequence)
 {
     size_t custom_read_pos;
 

@@ -7,6 +7,7 @@
 
 #include "mqttlog_device.h"         // -> header containing device-level function decls
 #include "mqttlog_core.h"           // -> header containing read/write function decls
+#include "mqttlog_ioctl.h"          // -> header containing ioctl function decls
 
 #define DEVICE_NAME "mqttlog"       // -> module creates /dev/mqttlog device
 
@@ -16,13 +17,14 @@ struct mqttlog_dev mqttlog;
 
 // file operations struct, contains the provided functions
 const struct file_operations mqttlog_fops = {
-    .owner   = THIS_MODULE,
-    .open    = mqttlog_open,
-    .release = mqttlog_release,
-    .read    = mqttlog_read,
-    .write   = mqttlog_write,
-    .poll    = mqttlog_poll,
-    .llseek  = noop_llseek,         // don't support seek (e.g. tail)
+    .owner          = THIS_MODULE,
+    .open           = mqttlog_open,
+    .release        = mqttlog_release,
+    .read           = mqttlog_read,
+    .write          = mqttlog_write,
+    .poll           = mqttlog_poll,
+    .unlocked_ioctl = mqttlog_ioctl,
+    .llseek         = noop_llseek,  // don't support seek (e.g. tail)
 };
 
 

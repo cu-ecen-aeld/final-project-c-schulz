@@ -5,7 +5,7 @@
 #include <linux/timekeeping.h>      // ktime_get_real_seconds()
 
 #include "mqttlog_parser.h"
-static uint64_t mqttlog_sequence = 0;
+static __u64 mqttlog_sequence = 0;
 
 int mqttlog_parse_message(const char *json,
                           size_t len,

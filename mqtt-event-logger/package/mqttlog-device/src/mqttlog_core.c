@@ -26,7 +26,7 @@ int mqttlog_open(struct inode *inode, struct file *file)
     struct mqttlog_file *ctx;
     int ret;
 
-    // allocate reader-specific cursor
+    // allocate reader-specific structure
     ctx = kmalloc(sizeof(*ctx), GFP_KERNEL);
     if (!ctx)
         return -ENOMEM;
@@ -49,7 +49,7 @@ int mqttlog_release(struct inode *inode, struct file *file)
     pr_info("mqttlog: close\n");
     struct mqttlog_file *ctx;
 
-    // reset reader-specific cursor
+    // reset reader-specific structure
     ctx = file->private_data;
     kfree(ctx);
 
@@ -105,8 +105,8 @@ ssize_t mqttlog_write(struct file *file,
     // print received message
     mqttlog_print_entry(&entry);
 
-    // get reader-specific cursor
-    if (!(ctx = file->private_data))
+    // get reader-specific structure
+    if (!(ctx = file->private_data) || !ctx->mqttlog)
         return -EFAULT;
 
     // lock ringbuffer mutex
@@ -147,8 +147,8 @@ ssize_t mqttlog_read(struct file *file,
     int tmp_len;
     int ret;
 
-    // get reader-specific cursor
-    if (!(ctx = file->private_data))
+    // get reader-specific structure
+    if (!(ctx = file->private_data) || !ctx->mqttlog)
         return -EFAULT;
 
     // non-blocking mode:
@@ -240,8 +240,8 @@ __poll_t mqttlog_poll(struct file *file,
     struct mqttlog_file *ctx;
     __poll_t mask = 0;
 
-    // get reader-specific cursor
-    if (!(ctx = file->private_data))
+    // get reader-specific structure
+    if (!(ctx = file->private_data) || !ctx->mqttlog)
         return mask;
 
     // register this file with the wait queue
