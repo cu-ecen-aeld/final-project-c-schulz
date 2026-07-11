@@ -2,7 +2,7 @@
 .config
 
 # GitHub action runner
-actions-runner/
+actions-runner*/
 
 # Compile output
 build/
