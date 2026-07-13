@@ -1,0 +1,7 @@
+config BR2_PACKAGE_MQTTLOGCTL
+	bool "mqttlogctl"
+	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_RUSTC
+	help
+	  Implements a userspace command-line utility for interacting with the mqttlog kernel module.
+	  Supports reading events, configuring topic filters, resetting the ring buffer, and retrieving runtime statistics.
