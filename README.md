@@ -8,7 +8,7 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
 
 1. Install dependencies
     * Buildroot dependencies listed [here](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory).
-    * On Ubuntu 26.04 you might need to install gnu install (see [here](https://www.reddit.com/r/Ubuntu/comments/1t5el5i/warning_on_ubuntu_2604_be_cautious/)):
+    * On Ubuntu 26.04 you might need to install the following (see [here](https://www.reddit.com/r/Ubuntu/comments/1t5el5i/warning_on_ubuntu_2604_be_cautious/)):
         ```
         sudo apt install coreutils-from-gnu     \
                          coreutils-from-uutils- \
@@ -16,11 +16,24 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
              --allow-remove-essential --mark-auto --purge
         ```
 
-2. Configure your WiFi credentials and build the project:
-    ```
-    make config WIFI_SSID=<wifi-ssid> WIFI_PWD=<wifi-pwd>
-    make
-    ```
+2. Configure and build the project:
+    * Configure your MQTT broker host with:
+        ```
+        make menuconfig
+
+        # Modify entry in:
+        #   External options
+        #    -> MQTT Event Logger external project tree
+        #     -> mqtt-subscriber
+        #      -> MQTT host (mqtt://<mqtt-broker-ip-address>:1883)
+
+        make save-menuconfig
+        ```
+    * Configure your wifi credentials and build the project with:
+        ```
+        make config WIFI_SSID=<wifi-ssid> WIFI_PWD=<wifi-pwd>
+        make
+        ```
 
 3. Flash image to SD card and set target device (defaults to `/dev/sde`):
     ```
@@ -88,3 +101,11 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
         ```
         mqtt pub -t test -m '{"text": "Hello World!"}'
         ```
+
+## Inspect Raspberry Pi Zero W
+
+1. Install SD card with image on Raspberry Pi Zero W.
+
+    * `mqtt-subscriber` boots automatically and subscribes to all messages published by your host.
+    * `mqttlog` kernel module is loaded automatically and provides the device `/dev/mqttlog`.
+    * `mqttlogctl` binary is available at `/usr/bin/mqttlogctl`.
