@@ -17,21 +17,18 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
         ```
 
 2. Configure and build the project:
+    * Configure buildroot with your custom WiFi credentials:
+        ```
+        make config WIFI_SSID=<wifi-ssid> WIFI_PWD=<wifi-pwd>
+        ```
+        The WiFi credential parameters are configured by command line because they should not be versionized in git.
     * Configure your MQTT broker host with:
         ```
         make menuconfig
-
-        # Modify entry in:
-        #   External options
-        #    -> MQTT Event Logger external project tree
-        #     -> mqtt-subscriber
-        #      -> MQTT host (mqtt://<mqtt-broker-ip-address>:1883)
-
-        make save-menuconfig
         ```
-    * Configure your wifi credentials and build the project with:
+        Modify the entry in `External options -> MQTT Event Logger external project tree -> mqtt-subscriber -> MQTT host` with your custom mqtt broker address (usually `mqtt://<mqtt-broker-ip-address>:1883`).
+    * Build the configured project with:
         ```
-        make config WIFI_SSID=<wifi-ssid> WIFI_PWD=<wifi-pwd>
         make
         ```
 
