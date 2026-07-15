@@ -15,6 +15,10 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
                          rust-coreutils-        \
              --allow-remove-essential --mark-auto --purge
         ```
+    * Install cargo (required for Rust program `mqttlogctl`):
+        ```
+        sudo apt install cargo
+        ```
 
 2. Configure and build the project:
     * Configure buildroot with your custom WiFi credentials:

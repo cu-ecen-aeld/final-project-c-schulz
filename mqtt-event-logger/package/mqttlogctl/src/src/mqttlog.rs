@@ -18,6 +18,7 @@ use crate::ioctl::{
 use std::fs::{File, OpenOptions};
 use std::io;
 use std::os::fd::{AsRawFd, RawFd};
+use std::io::{BufRead, BufReader};
 
 // wrapper representing /dev/mqttlog device
 pub struct MqttLog {
@@ -111,12 +112,12 @@ impl MqttLog {
     }
 
     pub fn dump(&self,
-                filter: Option<&str>,
+                topic:  Option<&str>,
                 follow: bool,
-                json: bool,
-                limit: Option<usize>) -> io::Result<()> {
-        // if parameter 'filter' is set, apply topic filter
-        if let Some(topic) = filter {
+                json:   bool,
+                limit:  Option<usize>) -> io::Result<()> {
+        // if parameter 'topic' is set, apply topic filter
+        if let Some(topic) = topic {
             self.set_filter(topic)?;
         }
 
@@ -129,8 +130,8 @@ impl MqttLog {
 
             // read next line
             line.clear();
-            let n = reader.read_line(&mut line)?;
-            if n == 0 {
+            let bytes = reader.read_line(&mut line)?;
+            if bytes == 0 {
 
                 // if '0' is returned, device is empty
                 // either exit here or wait for new events
@@ -143,8 +144,9 @@ impl MqttLog {
 
             // either print raw line or parse json
             if json {
-                let entry = parse(line);
-                println!("{}", serde_json::to_string(&entry)?);
+                print!("{}", line);
+                // let entry = parse(line);
+                // println!("{}", serde_json::to_string(&entry)?);
             } else {
                 print!("{}", line);
             }
