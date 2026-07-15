@@ -1,3 +1,10 @@
+// IOCTL definition:
+//
+// set_topic_filter
+// reset_ringbuffer
+// get_stats
+
+
 // magic IOCTL command seed (copied from 'mqttlog_ioctl.h')
 pub const MQTTLOG_IOCTL_MAGIC: u8 = b'M';
 
