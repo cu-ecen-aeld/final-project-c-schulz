@@ -176,3 +176,9 @@ clean-config: reset-wifi
 # cleanup buildroot build
 clean: clean-config
 	$(MAKE) -C $(BUILDROOT_DIR) distclean
+
+# cleanup custom packages
+clean-packages:
+	$(MAKE) -C $(BUILDROOT_DIR) mqtt-subscriber-dirclean
+	$(MAKE) -C $(BUILDROOT_DIR) mqttlog-device-dirclean
+	$(MAKE) -C $(BUILDROOT_DIR) mqttlogctl-dirclean
