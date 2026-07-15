@@ -31,9 +31,9 @@ build_image(){
     validate $?
   else
     print $YELLOW "Re-use old build, config has not changed"
-    rm -r buildroot_rpi/output/build/mqtt-subscriber*
-    rm -r buildroot_rpi/output/build/mqttlog-device-*
-    rm -r buildroot_rpi/output/build/mqttlogctl-*
+    make -C buildroot_rpi mqtt-subscriber-dirclean
+    make -C buildroot_rpi mqttlog-device-dirclean
+    make -C buildroot_rpi mqttlogctl-dirclean
   fi
 
   # compile buildroot image

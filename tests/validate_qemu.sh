@@ -28,9 +28,9 @@ build_image(){
   else
     # remove old mqttlog and mqtt-subscriber sources to force rebuild
     print $YELLOW "Re-use old build, config has not changed"
-    rm -r buildroot/output/build/mqtt-subscriber*
-    rm -r buildroot/output/build/mqttlog-device-*
-    rm -r buildroot/output/build/mqttlogctl-*
+    make -C buildroot mqtt-subscriber-dirclean
+    make -C buildroot mqttlog-device-dirclean
+    make -C buildroot mqttlogctl-dirclean
   fi
 
   # compile buildroot image
