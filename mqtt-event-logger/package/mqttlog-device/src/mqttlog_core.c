@@ -146,7 +146,7 @@ ssize_t mqttlog_read(struct file *file,
 {
     struct mqttlog_entry entry;
     struct mqttlog_file *reader;
-    char out[len]; //[MQTTLOG_MAX_BUFFER_LEN];
+    char out[MQTTLOG_MAX_BUFFER_LEN];
     char tmp[MQTTLOG_MAX_STRING_LEN];
     int out_len;
     int tmp_len;
@@ -207,6 +207,10 @@ ssize_t mqttlog_read(struct file *file,
 
         // check if message fits into user buffer
         if (out_len + tmp_len > len)
+            break;
+
+        // check if message fits into kernel buffer
+        if (out_len + tmp_len > sizeof(out))
             break;
 
         // copy string to buffer for copying to user

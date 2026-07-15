@@ -24,6 +24,9 @@ struct mqttlog_entry {
 // maximum length for string-conversion buffer
 #define MQTTLOG_MAX_STRING_LEN  2048
 
+// maximum buffer length for read()
+#define MQTTLOG_MAX_BUFFER_LEN  4096
+
 
 // enum for the potential json/mqtt object entries
 enum mqttlog_field_type {
