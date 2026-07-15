@@ -9,3 +9,5 @@ build/
 install/
 *.o
 *.sha1
+Cargo.lock
+vendor/
