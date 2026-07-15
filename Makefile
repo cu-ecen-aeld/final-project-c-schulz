@@ -118,8 +118,12 @@ else
 	$(MAKE) -C $(BUILDROOT_DIR) defconfig BR2_EXTERNAL=$(EXTERNAL_REL_BUILDROOT) BR2_DEFCONFIG=$(DEFCONFIG)
 endif
 
+# create vendor folder of cargo project (mqttlogctl) for buildroot build
+cargo:
+	cargo -Z unstable-options -C $(EXTERNAL_DIR)/package/mqttlogctl/src vendor
+
 # compile buildroot image; when switching between qemu and rpi build, clean buildroot build first
-build: submodule
+build: submodule cargo
 ifneq (,$(wildcard $(DEFCONFIG_CONFIG)))
 	@if [ ! "${DEFCONFIG}" = "$$(cat ${DEFCONFIG_CONFIG})" ]; then \
 		echo "CONFIG CHANGED -> CLEAN BUILD"; \
