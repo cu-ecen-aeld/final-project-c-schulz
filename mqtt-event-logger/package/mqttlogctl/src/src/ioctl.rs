@@ -1,8 +1,8 @@
 // IOCTL definition:
 //
-// set_topic_filter
-// reset_ringbuffer
-// get_stats
+// set_topic_filter()
+// reset_ringbuffer()
+// get_stats()
 
 
 // magic IOCTL command seed (copied from 'mqttlog_ioctl.h')

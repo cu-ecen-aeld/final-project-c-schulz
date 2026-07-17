@@ -14,6 +14,8 @@ use crate::ioctl::{
     MqttlogTopicFilter,
     MQTTLOG_MAX_TOPIC_LEN,
 };
+use crate::event::parse_event;
+use crate::framer::JsonFramer;
 
 use std::fs::{File, OpenOptions};
 use std::io;
@@ -123,7 +125,6 @@ impl MqttLog {
 
     pub fn dump(&self,
                 topic:  Option<&str>,
-                follow: bool,
                 json:   bool,
                 limit:  Option<usize>) -> io::Result<()> {
         // if parameter 'topic' is set, apply topic filter
@@ -133,20 +134,81 @@ impl MqttLog {
 
         // start reading from device
         let mut reader = BufReader::new(&self.file);
-        let mut line = String::new();
-        let mut count = 0usize;
+        let mut framer = JsonFramer::new();
+        let mut buffer  = String::new();
+        let mut line   = String::new();
+        let mut count  = 0usize;
 
         loop {
             // read next line
             line.clear();
             match reader.read_line(&mut line) {
 
-                // if '0' is returned, exit regularly (device empty?)
+                // if '0' is returned, exit regularly (device empty / EOF)
                 Ok(0) => break,
 
-                // regular case, print raw line or parse json (later)
+                // regular case, data is received
                 Ok(_) => {
-                    print!("{}", line);
+
+                    // append line to event and analyze JSON frame
+                    buffer.push_str(&line);
+                    framer.feed(&line);
+
+                    // if JSON object is not complete yet, continue reading
+                    if !framer.complete() {
+                        continue;
+                    }
+
+                    // otherwise, parse event into JSON object
+                    let event = match parse_event(&buffer) {
+
+                        Ok(event) => event,
+
+                        // in case of error, print error and reset JSON frame
+                        Err(e) => {
+                            eprintln!(
+                                "mqttlogctl: invalid json event: {}",
+                                e
+                            );
+
+                            buffer.clear();
+                            framer.reset();
+
+                            // JSON object was probably not complete yet
+                            continue;
+                        }
+                    };
+
+                    // pretty-print whole event as JSON
+                    if json {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&event)
+                                .map_err(io::Error::other)?
+                        );
+
+                    // or print raw event
+                    } else {
+                        println!(
+                            "[{}] #{} {}",
+                            // convert timestamp to readable format
+                            event.timestamp.format("%Y-%m-%d %H:%M:%S%.3f UTC"),
+                            event.sequence,
+                            event.topic
+                        );
+
+                        // pretty-print payload as JSON
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&event.payload)
+                                .map_err(io::Error::other)?
+                        );
+
+                        // print newline
+                        println!();
+                    }
+
+                    // count received events
                     count += 1;
 
                     // exit if message dump limit is reached
@@ -155,6 +217,10 @@ impl MqttLog {
                             break;
                         }
                     }
+
+                    // prepare for next event
+                    buffer.clear();
+                    framer.reset();
                 }
 
                 // exit regularly if ringbuffer is empty
@@ -164,7 +230,9 @@ impl MqttLog {
                 }
 
                 // for all other errors, return error
-                Err(e) => return Err(e),
+                Err(e) => {
+                    return Err(e);
+                }
             }
         }
 

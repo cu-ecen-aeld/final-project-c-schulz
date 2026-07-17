@@ -22,7 +22,7 @@ int mqttlog_parse_message(const char *json,
 
     // assign metadata
     entry->sequence  = mqttlog_sequence++;          // post-increment because first index is 0
-    entry->timestamp = ktime_get_real_seconds();    // TODO: readable format
+    entry->timestamp = ktime_get_real_ns();         // converted into readable format by mqttlogctl
 
     // parse and assign topic, discard parsed part of json
     ret = mqttlog_parse_field(json, "topic", MQTTLOG_FIELD_STRING_RAW, entry->topic, MQTTLOG_MAX_TOPIC_LEN, &json);
@@ -60,10 +60,10 @@ int mqttlog_format_entry(const struct mqttlog_entry *entry,
     return scnprintf(out,
                     out_size,
                     "{\n"
-                    "  sequence : %llu,\n"
-                    "  timestamp: %llu,\n"
-                    "  topic    : %s,\n"
-                    "  payload  : %s\n"
+                    "  \"sequence\" : %llu,\n"
+                    "  \"timestamp\": %llu,\n"
+                    "  \"topic\"    : \"%s\",\n"
+                    "  \"payload\"  : %s\n"
                     "}\n",
                     entry->sequence,
                     entry->timestamp,

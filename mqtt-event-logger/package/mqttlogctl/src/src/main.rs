@@ -1,6 +1,8 @@
 mod cli;
 mod ioctl;
 mod mqttlog;
+mod event;
+mod framer;
 
 use clap::Parser;
 
@@ -42,7 +44,7 @@ fn main() {
             json,
             limit,
             topic,
-        } => dev.dump(topic.as_deref(), follow, json, limit),
+        } => dev.dump(topic.as_deref(), json, limit),
     };
 
     // print errors
