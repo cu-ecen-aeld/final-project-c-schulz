@@ -228,26 +228,25 @@ run_mqttlog_cat_test(){
   print $NC "Validating cat..."
   rm -f $LOCAL_LOGFILE
   OUT='{
-  sequence : ***,
-  timestamp: ***,
-  topic    : test-topic1,
-  payload  : 123
+  "sequence" : 0,
+  "timestamp": ***,
+  "topic"    : "test-topic1",
+  "payload"  : 123
 }
 {
-  sequence : ***,
-  timestamp: ***,
-  topic    : test-topic2,
-  payload  : [1,2,3]
+  "sequence" : 1,
+  "timestamp": ***,
+  "topic"    : "test-topic2",
+  "payload"  : [1,2,3]
 }
 {
-  sequence : ***,
-  timestamp: ***,
-  topic    : test-topic3,
-  payload  : {"A": 2, "B": 3, "C": 0}
+  "sequence" : 2,
+  "timestamp": ***,
+  "topic"    : "test-topic3",
+  "payload"  : {"A": 2, "B": 3, "C": 0}
 }'
   ssh_cmd "head -n18 $MQTT_DEVICE" > $LOCAL_LOGFILE
-  sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
-  sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
+  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $LOCAL_LOGFILE
 
   validate_content $LOCAL_LOGFILE "$OUT"
   rm -f $LOCAL_LOGFILE
@@ -303,31 +302,47 @@ run_mqttlog_publish_subscribe_test(){
   ssh_cmd "/etc/init.d/S98mqttlog restart"
 
   CONTENT1='{
-  sequence : ***,
-  timestamp: ***,
-  topic    : test1,
-  payload  : {"text": "HI!"}
-}'
-  CONTENT2='{
-  sequence : ***,
-  timestamp: ***,
-  topic    : test2,
-  payload  : {"text": "BYE!"}
+  "sequence" : 0,
+  "timestamp": ***,
+  "topic"    : "test1",
+  "payload"  : {"text": "HI!"}
 }'
   CONTENT12='{
-  sequence : ***,
-  timestamp: ***,
-  topic    : test1,
-  payload  : {"text": "HI!"}
+  "sequence" : 0,
+  "timestamp": ***,
+  "topic"    : "test1",
+  "payload"  : {"text": "HI!"}
 }
 {
-  sequence : ***,
-  timestamp: ***,
-  topic    : test2,
-  payload  : {"text": "BYE!"}
+  "sequence" : 1,
+  "timestamp": ***,
+  "topic"    : "test2",
+  "payload"  : {"text": "BYE!"}
 }'
-  CONTENT1212="$CONTENT12
-$CONTENT12"
+  CONTENT1212='{
+  "sequence" : 0,
+  "timestamp": ***,
+  "topic"    : "test1",
+  "payload"  : {"text": "HI!"}
+}
+{
+  "sequence" : 1,
+  "timestamp": ***,
+  "topic"    : "test2",
+  "payload"  : {"text": "BYE!"}
+}
+{
+  "sequence" : 2,
+  "timestamp": ***,
+  "topic"    : "test1",
+  "payload"  : {"text": "HI!"}
+}
+{
+  "sequence" : 3,
+  "timestamp": ***,
+  "topic"    : "test2",
+  "payload"  : {"text": "BYE!"}
+}'
 
   # # clear ringbuffer
   # ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
@@ -339,8 +354,7 @@ $CONTENT12"
 
   print $NC "Validating first message..."
   ssh_cmd "head -n6 $MQTT_DEVICE" > $LOCAL_LOGFILE
-  sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
-  sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
+  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT1"
 
   # publish second test message
@@ -350,8 +364,7 @@ $CONTENT12"
 
   print $NC "Validating second message..."
   ssh_cmd "head -n12 $MQTT_DEVICE" > $LOCAL_LOGFILE
-  sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
-  sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
+  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT12"
 
   # publish both messages
@@ -364,8 +377,7 @@ $CONTENT12"
   # validate resulting content
   print $NC "Validating both messages..."
   ssh_cmd "head -n24 $MQTT_DEVICE" > $LOCAL_LOGFILE
-  sed -i "s/sequence :.*,/sequence : ***,/g" $LOCAL_LOGFILE
-  sed -i "s/timestamp:.*,/timestamp: ***,/g" $LOCAL_LOGFILE
+  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT1212"
 
   # remove logfile copy
