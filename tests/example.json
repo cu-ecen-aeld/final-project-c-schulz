@@ -1,0 +1,12 @@
+{
+  "id": 1042,
+  "username": "coder123",
+  "isActive": true,
+  "score": 95.5,
+  "contact": {
+    "email": "coder123@example.com",
+    "phone": "+49-7125-12345"
+  },
+  "roles": ["User", "Moderator"],
+  "subscription": null
+}
