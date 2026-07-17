@@ -17,21 +17,31 @@ use crate::ioctl::{
 
 use std::fs::{File, OpenOptions};
 use std::io;
+use std::os::unix::fs::OpenOptionsExt;
 use std::os::fd::{AsRawFd, RawFd};
 use std::io::{BufRead, BufReader};
 
 // wrapper representing /dev/mqttlog device
 pub struct MqttLog {
-    file: File,                         // treat mqttlog as file
+    file: File,
 }
 
 impl MqttLog {
     // open the /dev/mqttlog character device
-    pub fn open() -> io::Result<Self> {
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open("/dev/mqttlog")?;
+    pub fn open(nonblocking: bool) -> io::Result<Self> {
+        let mut options = OpenOptions::new();
+
+        // set read and write options
+        options.read(true)
+               .write(true);
+
+        // set nonblocking option if 'follow' = false
+        if nonblocking {
+            options.custom_flags(nix::libc::O_NONBLOCK);
+        }
+
+        // actually open the device
+        let file = options.open("/dev/mqttlog")?;
 
         Ok(Self { file })
     }
@@ -127,36 +137,34 @@ impl MqttLog {
         let mut count = 0usize;
 
         loop {
-
             // read next line
             line.clear();
-            let bytes = reader.read_line(&mut line)?;
-            if bytes == 0 {
+            match reader.read_line(&mut line) {
 
-                // if '0' is returned, device is empty
-                // either exit here or wait for new events
-                if follow {
-                    continue;
-                } else {
+                // if '0' is returned, exit regularly (device empty?)
+                Ok(0) => break,
+
+                // regular case, print raw line or parse json (later)
+                Ok(_) => {
+                    print!("{}", line);
+                    count += 1;
+
+                    // exit if message dump limit is reached
+                    if let Some(limit) = limit {
+                        if count >= limit {
+                            break;
+                        }
+                    }
+                }
+
+                // exit regularly if ringbuffer is empty
+                // - follow = false / O_NONBLOCK: EAGAIN, exit here
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
                     break;
                 }
-            }
 
-            // either print raw line or parse json
-            if json {
-                print!("{}", line);
-                // let entry = parse(line);
-                // println!("{}", serde_json::to_string(&entry)?);
-            } else {
-                print!("{}", line);
-            }
-
-            // exit if message dump limit is reached
-            count += 1;
-            if let Some(limit) = limit {
-                if count >= limit {
-                    break;
-                }
+                // for all other errors, return error
+                Err(e) => return Err(e),
             }
         }
 

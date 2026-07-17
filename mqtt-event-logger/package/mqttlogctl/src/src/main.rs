@@ -11,9 +11,15 @@ fn main() {
     // parse commands
     let cli = Cli::parse();
 
+    // evaluate 'follow' argument
+    let nonblocking = match &cli.command {
+        Command::Dump { follow, .. } => !follow,
+        _ => true,
+    };
+
     // open device, print errors
-    let dev = MqttLog::open().unwrap_or_else(|e| {
-        eprintln!("Failed to open /dev/mqttlog: {}", e);
+    let dev = MqttLog::open(nonblocking).unwrap_or_else(|e| {
+        eprintln!("mqttlogctl: Failed to open /dev/mqttlog: {}", e);
         std::process::exit(1);
     });
 

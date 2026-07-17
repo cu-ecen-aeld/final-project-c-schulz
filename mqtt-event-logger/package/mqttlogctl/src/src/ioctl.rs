@@ -16,7 +16,6 @@ pub const MQTTLOG_MAX_TOPIC_LEN: usize = 128;
 
 // define struct equivalent to mqttlog_stats
 #[repr(C)]          // ensure exact C struct match!
-#[derive(Debug)]    // enable debug output
 pub struct MqttlogStats {
     pub events_written: u64,
     pub events_dropped: u64,
