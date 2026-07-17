@@ -102,6 +102,12 @@ Please see the [Project Overview page](../../wiki/Project-Overview).
         ```
         mqtt pub -t test -m '{"text": "Hello World!"}'
         ```
+    * use `mqttlogctl` cli tool to control the device; available commands:
+        ```
+        mqttlogctl stats
+        mqttlogctl reset
+        mqttlogctl dump [--follow] [--json] [--limit N] [--filter TOPIC]
+        ```
 
 ## Inspect Raspberry Pi Zero W
 
