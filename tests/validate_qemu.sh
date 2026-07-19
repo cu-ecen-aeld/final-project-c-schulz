@@ -498,7 +498,7 @@ asdfBullshit123'
   print $NC "Validating 'mqttlogctl dump -t test -j'..."
   ssh_cmd "mqttlogctl dump -t test -j" > $LOCAL_LOGFILE
   validate $?
-  CONTENT_FILTER_TEST_JSON='{
+  CONTENT_FILTER_STRING_JSON='{
   "payload": {
     "contact": {
       "email": "coder123@example.com",
@@ -520,15 +520,53 @@ asdfBullshit123'
 }'
   remove_timestamp_utc $LOCAL_LOGFILE
   validate_json $LOCAL_LOGFILE
-  validate_content $LOCAL_LOGFILE "$CONTENT_FILTER_TEST_JSON"
+  validate_content $LOCAL_LOGFILE "$CONTENT_FILTER_STRING_JSON"
 
-  # 6) mqttlogctl dump -t test#
+  # 6) mqttlogctl dump -t #
+  print $NC "Validating 'mqttlogctl dump -t \"#\""
+  ssh_cmd "mqttlogctl dump -t \"#\"" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_FILTER_HASH=$CONTENT_DUMP
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_FILTER_HASH"
+
   # 7) mqttlogctl dump -t test/#
+  print $NC "Validating 'mqttlogctl dump -t \"test/#\""
+  ssh_cmd "mqttlogctl dump -t \"test/#\"" > $LOCAL_LOGFILE
+  validate $?
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_FILTER_HASH"
+
   # 8) mqttlogctl dump -t test/+
+  print $NC "Validating 'mqttlogctl dump -t test/+"
+  ssh_cmd "mqttlogctl dump -t test/+" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_FILTER_PLUS='[1970-01-01 *** UTC] #0 test/topic1
+{"text": "HI!"}'
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_FILTER_PLUS"
+
+  # 9) mqttlogctl dump -t test/+/topic2
+  print $NC "Validating 'mqttlogctl dump -t test/+/topic2"
+  ssh_cmd "mqttlogctl dump -t test/+/topic2" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_FILTER_SUB_PLUS='[1970-01-01 *** UTC] #1 test/topics/topic2
+asdfBullshit123'
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_FILTER_SUB_PLUS"
+
+  # 10) mqttlogctl dump -t +/topic1
+  print $NC "Validating 'mqttlogctl dump -t +/topic1"
+  ssh_cmd "mqttlogctl dump -t +/topic1" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_FILTER_PLUS_SUB='[1970-01-01 *** UTC] #0 test/topic1
+{"text": "HI!"}'
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_FILTER_PLUS_SUB"
 
   #####
   # test reset and stats
-  # 9)  mqttlogctl stats
+  # 11) mqttlogctl stats
   print $NC "Validating 'mqttlogctl stats'..."
   ssh_cmd "mqttlogctl stats" > $LOCAL_LOGFILE
   validate $?
@@ -538,18 +576,18 @@ Buffer size    : 128
 Buffer used    : 3'
   validate_content $LOCAL_LOGFILE "$CONTENT_STATS"
 
-  # 10) mqttlogctl reset
+  # 12) mqttlogctl reset
   print $NC "Validating 'mqttlogctl reset'..."
   ssh_cmd "mqttlogctl reset"
   validate $?
 
-  # 11) mqttlogctl dump
+  # 13) mqttlogctl dump
   print $NC "Validating 'mqttlogctl dump'..."
   ssh_cmd "mqttlogctl dump" > $LOCAL_LOGFILE
   validate $?
   validate_content $LOCAL_LOGFILE ""
 
-  # 12) mqttlogctl stats
+  # 14) mqttlogctl stats
   print $NC "Validating 'mqttlogctl stats'..."
   ssh_cmd "mqttlogctl stats" > $LOCAL_LOGFILE
   validate $?
