@@ -52,6 +52,14 @@ mqtt_publish(){
 }
 export -f mqtt_publish
 
+# mqtt_publish $topic $message: publish file content on provided topic
+mqtt_publish_file(){
+  topic=$1
+  file=$2
+  mqtt pub -t $topic -m:file "$file" 2> /dev/null
+}
+export -f mqtt_publish_file
+
 # validate_json $file: check whether file contains valid json
 validate_json(){
   file=$1
@@ -75,3 +83,17 @@ scp_file(){
   scp -P 2222 root@localhost:$file .
 }
 export -f scp_file
+
+# remove_timestamp_json $file: replace timestamps by '***'
+remove_timestamp_json(){
+  FILE=$1
+  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $FILE
+}
+export -f remove_timestamp_json
+
+# remove_timestamp_utc $file: replace UTC timestamps by '***'
+remove_timestamp_utc(){
+  FILE=$1
+  sed -i "s/[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] UTC/*** UTC/g" $FILE
+}
+export -f remove_timestamp_utc

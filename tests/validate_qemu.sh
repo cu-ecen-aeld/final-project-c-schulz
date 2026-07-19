@@ -7,7 +7,6 @@ MQTT_DEVICE=/dev/mqttlog
 
 source ${TEST_DIR}/validate_helpers.sh
 
-
 #######################
 ## available test steps
 
@@ -208,10 +207,8 @@ run_mqttlog_cat_test(){
   print $YELLOW "Run cat test"
   LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
 
-  # clear ringbuffer
-  # TODO
+  # restart ringbuffer
   ssh_cmd "/etc/init.d/S98mqttlog restart"
-  # ssh_cmd "cat $MQTT_DEVICE" 1> /dev/null 2> /dev/null
 
   print $NC "Echoing int payload..."
   ssh_cmd "echo '{ \"topic\": \"test-topic1\", \"payload\": 123 }' > $MQTT_DEVICE"
@@ -246,7 +243,7 @@ run_mqttlog_cat_test(){
   "payload"  : {"A": 2, "B": 3, "C": 0}
 }'
   ssh_cmd "head -n18 $MQTT_DEVICE" > $LOCAL_LOGFILE
-  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $LOCAL_LOGFILE
+  remove_timestamp_json $LOCAL_LOGFILE
 
   validate_content $LOCAL_LOGFILE "$OUT"
   rm -f $LOCAL_LOGFILE
@@ -260,8 +257,7 @@ run_mqttlog_buffer_size_test(){
   LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
   rm -f $LOCAL_LOGFILE
 
-  # clear ringbuffer
-  # TODO
+  # restart ringbuffer
   ssh_cmd "/etc/init.d/S98mqttlog restart"
 
   # ringbuffer size is 128, so we push >128 elements
@@ -297,8 +293,7 @@ run_mqttlog_publish_subscribe_test(){
   JSON2='{"text": "BYE!"}'
   LOCAL_LOGFILE=$(basename $MQTT_DEVICE)
 
-  # clear ringbuffer
-  # TODO
+  # restart ringbuffer
   ssh_cmd "/etc/init.d/S98mqttlog restart"
 
   CONTENT1='{
@@ -354,7 +349,7 @@ run_mqttlog_publish_subscribe_test(){
 
   print $NC "Validating first message..."
   ssh_cmd "head -n6 $MQTT_DEVICE" > $LOCAL_LOGFILE
-  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $LOCAL_LOGFILE
+  remove_timestamp_json $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT1"
 
   # publish second test message
@@ -364,7 +359,7 @@ run_mqttlog_publish_subscribe_test(){
 
   print $NC "Validating second message..."
   ssh_cmd "head -n12 $MQTT_DEVICE" > $LOCAL_LOGFILE
-  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $LOCAL_LOGFILE
+  remove_timestamp_json $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT12"
 
   # publish both messages
@@ -377,12 +372,169 @@ run_mqttlog_publish_subscribe_test(){
   # validate resulting content
   print $NC "Validating both messages..."
   ssh_cmd "head -n24 $MQTT_DEVICE" > $LOCAL_LOGFILE
-  sed -i "s/\"timestamp\":.*,/\"timestamp\": ***,/g" $LOCAL_LOGFILE
+  remove_timestamp_json $LOCAL_LOGFILE
   validate_content $LOCAL_LOGFILE "$CONTENT1212"
 
   # remove logfile copy
   rm -f $LOCAL_LOGFILE
   print $GREEN "Finished publish-subscribe test via $MQTT_DEVICE"
+}
+
+run_mqttlogctl_test(){
+  print $YELLOW "Run tests with mqttlogctl"
+  LOCAL_LOGFILE=$(basename $MQTT_LOGFILE)
+
+  #####
+  # restart ringbuffer
+  ssh_cmd "/etc/init.d/S98mqttlog restart"
+  rm -f $LOCAL_LOGFILE
+
+  # publish small json message
+  print $NC "Publishing small JSON message.."
+  mqtt_publish test/topic1 '{"text": "HI!"}'
+  validate $?
+
+  # publish non-json message
+  print $NC "Publishing non-JSON message.."
+  mqtt_publish test/topics/topic2 'asdfBullshit123'
+  validate $?
+
+  # publish large json file
+  print $NC "Publishing large JSON message.."
+  mqtt_publish_file test ${TEST_DIR}/example.json
+  validate $?
+
+  #####
+  # test dump format, follow and limit
+  # 1) mqttlogctl dump
+  print $NC "Validating 'mqttlogctl dump'..."
+  ssh_cmd "mqttlogctl dump" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_DUMP='[1970-01-01 *** UTC] #0 test/topic1
+{"text": "HI!"}
+
+[1970-01-01 *** UTC] #1 test/topics/topic2
+asdfBullshit123
+
+[1970-01-01 *** UTC] #2 test
+{
+  "id": 1042,
+  "username": "coder123",
+  "isActive": true,
+  "score": 95.5,
+  "contact": {
+    "email": "coder123@example.com",
+    "phone": "+49-7125-12345"
+  },
+  "roles": ["User", "Moderator"],
+  "subscription": null
+}'
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_DUMP"
+
+  # 2) mqttlogctl dump -j
+  print $NC "Validating 'mqttlogctl dump -j'..."
+  ssh_cmd "mqttlogctl dump -j" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_DUMP_JSON='{
+  "payload": {
+    "text": "HI!"
+  },
+  "sequence": 0,
+  "timestamp": "1970-01-01 *** UTC",
+  "topic": "test/topic1"
+}
+{
+  "payload": "asdfBullshit123",
+  "sequence": 1,
+  "timestamp": "1970-01-01 *** UTC",
+  "topic": "test/topics/topic2"
+}
+{
+  "payload": {
+    "contact": {
+      "email": "coder123@example.com",
+      "phone": "+49-7125-12345"
+    },
+    "id": 1042,
+    "isActive": true,
+    "roles": [
+      "User",
+      "Moderator"
+    ],
+    "score": 95.5,
+    "subscription": null,
+    "username": "coder123"
+  },
+  "sequence": 2,
+  "timestamp": "1970-01-01 *** UTC",
+  "topic": "test"
+}'
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_DUMP_JSON"
+
+  # 3) mqttlogctl dump -l 2
+  print $NC "Validating 'mqttlogctl dump -l 2'..."
+  ssh_cmd "mqttlogctl dump -l 2" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_DUMP_L2='[1970-01-01 *** UTC] #0 test/topic1
+{"text": "HI!"}
+
+[1970-01-01 *** UTC] #1 test/topics/topic2
+asdfBullshit123'
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_DUMP_L2"
+
+  # 4) mqttlogctl dump -l 2 -f
+  print $NC "Validating 'mqttlogctl dump -l 2 -f'..."
+  try_cmd_for 2s 1 "ssh_cmd 'mqttlogctl dump -l 2 -f'" > $LOCAL_LOGFILE
+  remove_timestamp_utc $LOCAL_LOGFILE
+  sed -i -e "1d" $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_DUMP_L2"
+
+  #####
+  # test topic filter
+  # 5) mqttlogctl dump -t test
+  # 6) mqttlogctl dump -t test#
+  # 7) mqttlogctl dump -t test/#
+  # 8) mqttlogctl dump -t test/+
+
+  #####
+  # test reset and stats
+  # 9)  mqttlogctl stats
+  print $NC "Validating 'mqttlogctl stats'..."
+  ssh_cmd "mqttlogctl stats" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_STATS='Events written : 3
+Events dropped : 0
+Buffer size    : 128
+Buffer used    : 3'
+  validate_content $LOCAL_LOGFILE "$CONTENT_STATS"
+
+  # 10) mqttlogctl reset
+  print $NC "Validating 'mqttlogctl reset'..."
+  ssh_cmd "mqttlogctl reset"
+  validate $?
+
+  # 11) mqttlogctl dump
+  print $NC "Validating 'mqttlogctl dump'..."
+  ssh_cmd "mqttlogctl dump" > $LOCAL_LOGFILE
+  validate $?
+  validate_content $LOCAL_LOGFILE ""
+
+  # 12) mqttlogctl stats
+  print $NC "Validating 'mqttlogctl stats'..."
+  ssh_cmd "mqttlogctl stats" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_STATS2='Events written : 3
+Events dropped : 0
+Buffer size    : 128
+Buffer used    : 0'
+  validate_content $LOCAL_LOGFILE "$CONTENT_STATS2"
+
+  #####
+  rm -f $LOCAL_LOGFILE
+  print $GREEN "Finished tests with mqttlogctl"
 }
 
 
@@ -423,8 +575,11 @@ case "$1" in
   mqttlog-pub-sub)
     run_mqttlog_publish_subscribe_test
     ;;
+  mqttlogctl)
+    run_mqttlogctl_test
+    ;;
   *)
-    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse|mqttlog-cat|mqttlog-buffer-size|mqttlog-pub-sub}"
+    echo "Usage: $0 {build|start|stop|ssh|mqtt-subscriber|mqtt-pub-sub|mqttlog-module|mqttlog-parse|mqttlog-cat|mqttlog-buffer-size|mqttlog-pub-sub|mqttlogctl}"
     exit 1
     ;;
 esac
