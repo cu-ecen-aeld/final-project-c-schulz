@@ -6,7 +6,7 @@
 // dump()
 
 
-use crate::ioctl::{
+use crate::mqttlog_ioctl::{
     mqttlog_get_stats,
     mqttlog_reset_ringbuffer,
     mqttlog_set_topic_filter,
@@ -14,8 +14,8 @@ use crate::ioctl::{
     MqttlogTopicFilter,
     MQTTLOG_MAX_TOPIC_LEN,
 };
-use crate::event::parse_event;
-use crate::framer::JsonFramer;
+use crate::mqtt_event_parser::parse_event;
+use crate::mqtt_event_framer::Framer;
 
 use std::fs::{File, OpenOptions};
 use std::io;
@@ -134,8 +134,8 @@ impl MqttLog {
 
         // start reading from device
         let mut reader = BufReader::new(&self.file);
-        let mut framer = JsonFramer::new();
-        let mut buffer  = String::new();
+        let mut framer = Framer::new();
+        let mut buffer = String::new();
         let mut line   = String::new();
         let mut count  = 0usize;
 
@@ -150,62 +150,42 @@ impl MqttLog {
                 // regular case, data is received
                 Ok(_) => {
 
-                    // append line to event and analyze JSON frame
+                    // append line to event and analyze frame
                     buffer.push_str(&line);
                     framer.feed(&line);
 
-                    // if JSON object is not complete yet, continue reading
+                    // if object is not complete yet, continue reading
                     if !framer.complete() {
                         continue;
                     }
 
-                    // otherwise, parse event into JSON object
+                    // otherwise, parse event into internal object (not necessarily json)
                     let event = match parse_event(&buffer) {
-
                         Ok(event) => event,
 
-                        // in case of error, print error and reset JSON frame
+                        // in case of error, print error and reset frame
                         Err(e) => {
                             eprintln!(
-                                "mqttlogctl: invalid json event: {}",
+                                "mqttlogctl: failed to parse event: {}",
                                 e
                             );
 
                             buffer.clear();
                             framer.reset();
 
-                            // JSON object was probably not complete yet
+                            // object was probably not complete yet
                             continue;
                         }
                     };
 
                     // pretty-print whole event as JSON
                     if json {
-                        println!(
-                            "{}",
-                            serde_json::to_string_pretty(&event)
-                                .map_err(io::Error::other)?
-                        );
+                        event.print_json()
+                            .map_err(io::Error::other)?;
 
                     // or print raw event
                     } else {
-                        println!(
-                            "[{}] #{} {}",
-                            // convert timestamp to readable format
-                            event.timestamp.format("%Y-%m-%d %H:%M:%S%.3f UTC"),
-                            event.sequence,
-                            event.topic
-                        );
-
-                        // pretty-print payload as JSON
-                        println!(
-                            "{}",
-                            serde_json::to_string_pretty(&event.payload)
-                                .map_err(io::Error::other)?
-                        );
-
-                        // print newline
-                        println!();
+                        event.print_raw();
                     }
 
                     // count received events

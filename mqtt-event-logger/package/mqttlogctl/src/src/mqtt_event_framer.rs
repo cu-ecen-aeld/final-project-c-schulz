@@ -1,19 +1,19 @@
-// JsonFramer helper definition:
+// Framer helper definition:
 //
 // feed()
 // complete()
 // reset()
 
 
-// struct used to parse json objects,
-// collects lines until one complete JSON object has been received.
-pub struct JsonFramer {
+// struct used to parse (JSON-like) objects,
+// collects lines until one complete object has been received.
+pub struct Framer {
     depth:     isize,
     in_string: bool,
     escaped:   bool,
 }
 
-impl JsonFramer {
+impl Framer {
     // constructor
     pub fn new() -> Self {
         Self {
@@ -23,7 +23,7 @@ impl JsonFramer {
         }
     }
 
-    // feed one line of JSON into the parser
+    // feed one line into the parser
     pub fn feed(&mut self, line: &str) {
         for c in line.chars() {
 
@@ -60,12 +60,12 @@ impl JsonFramer {
         }
     }
 
-    // return true if a complete JSON object has been received
+    // return true if a complete object has been received
     pub fn complete(&self) -> bool {
         self.depth == 0
     }
 
-    // reset parser state for the next JSON object
+    // reset parser state for the next object
     pub fn reset(&mut self) {
         self.depth     = 0;
         self.in_string = false;

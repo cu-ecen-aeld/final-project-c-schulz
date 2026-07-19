@@ -1,12 +1,13 @@
-mod cli;
-mod ioctl;
+mod mqttlogctl_cli;
+mod mqttlog_ioctl;
 mod mqttlog;
-mod event;
-mod framer;
+mod mqtt_event;
+mod mqtt_event_parser;
+mod mqtt_event_framer;
 
 use clap::Parser;
 
-use cli::{Cli, Command};
+use mqttlogctl_cli::{Cli, Command};
 use mqttlog::MqttLog;
 
 fn main() {
@@ -40,7 +41,7 @@ fn main() {
 
         // dump messages
         Command::Dump {
-            follow,
+            follow: _,
             json,
             limit,
             topic,

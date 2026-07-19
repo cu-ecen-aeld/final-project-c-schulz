@@ -1,4 +1,4 @@
-// IOCTL definition:
+// MqttLog IOCTL definition:
 //
 // set_topic_filter()
 // reset_ringbuffer()
