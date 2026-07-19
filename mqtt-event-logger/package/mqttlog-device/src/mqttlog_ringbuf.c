@@ -201,17 +201,77 @@ bool mqttlog_ringbuf_has_data(const struct mqttlog_ringbuf *rb,
     return false;
 }
 
-bool mqttlog_topic_matches(const char *topic_filter,
+bool mqttlog_topic_matches(const char *filter,
                            const char *topic)
 {
-    if (!topic_filter || !topic)
+    if (!filter || !topic)
         return false;
 
     // if filter is empty, any topic matches
-    if (topic_filter[0] == '\0')
+    if (filter[0] == '\0')
         return true;
 
+    // 1) Variant A: exact match
     // compare filter and topic strings
     // strcmp does exact match, no wildcard match
-    return (strcmp(topic_filter, topic) == 0);
+    // return (strcmp(filter, topic) == 0);
+
+    // 2) Variant B: wildcard matches
+    while (*filter && *topic) {
+
+        // '#' matches everything up from the current level,
+        // but must be the last char of the filter string
+        if (*filter == '#')
+            return filter[1] == '\0';
+
+        // '+' matches exactly one topic level,
+        // skip topic level and advance to the next one
+        if (*filter == '+') {
+            filter++;
+
+            // '+' must occupy a complete level,
+            // the next char must be '/' or the end of the string
+            if ((*filter != '\0') && (*filter != '/'))
+                return false;
+
+            // skip until reaching the next topic level
+            while (*topic && (*topic != '/'))
+                topic++;
+
+            // if end of filter is reached,
+            // we also need to be at the end of the topic string
+            if (*filter == '\0')
+                return *topic == '\0';
+
+            // next char in topic must be '/'
+            if (*topic != '/')
+                return false;
+
+            // we are at the end of the topic level
+            // skip both '/' and advance to the next level
+            filter++;
+            topic++;
+            continue;
+        }
+
+        // compare the next non-wildcard character
+        if (*filter != *topic)
+            return false;
+
+        // advance to the next character
+        filter++;
+        topic++;
+    }
+
+    // if topic ends but filter still has '/#', this is valid
+    // (e.g. filter 'test/#' and topic 'test')
+    if ((*topic == '\0') && (*filter == '/') && (filter[1] == '#'))
+        return true;
+
+    // if filter ends with #, everything is valid
+    if (*filter == '#')
+        return filter[1] == '\0';
+
+    // ensure that the end of both strings is reached (no leftovers)
+    return (*filter == '\0') && (*topic == '\0');
 }
