@@ -494,7 +494,34 @@ asdfBullshit123'
 
   #####
   # test topic filter
-  # 5) mqttlogctl dump -t test
+  # 5) mqttlogctl dump -t test -j
+  print $NC "Validating 'mqttlogctl dump -t test -j'..."
+  ssh_cmd "mqttlogctl dump -t test -j" > $LOCAL_LOGFILE
+  validate $?
+  CONTENT_FILTER_TEST_JSON='{
+  "payload": {
+    "contact": {
+      "email": "coder123@example.com",
+      "phone": "+49-7125-12345"
+    },
+    "id": 1042,
+    "isActive": true,
+    "roles": [
+      "User",
+      "Moderator"
+    ],
+    "score": 95.5,
+    "subscription": null,
+    "username": "coder123"
+  },
+  "sequence": 2,
+  "timestamp": "1970-01-01 *** UTC",
+  "topic": "test"
+}'
+  remove_timestamp_utc $LOCAL_LOGFILE
+  validate_json $LOCAL_LOGFILE
+  validate_content $LOCAL_LOGFILE "$CONTENT_FILTER_TEST_JSON"
+
   # 6) mqttlogctl dump -t test#
   # 7) mqttlogctl dump -t test/#
   # 8) mqttlogctl dump -t test/+
