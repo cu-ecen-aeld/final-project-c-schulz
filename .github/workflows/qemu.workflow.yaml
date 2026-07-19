@@ -35,6 +35,8 @@ jobs:
             run: ./tests/validate_qemu.sh mqttlog-buffer-size
           - name: Run publish-subscribe test via kernel module
             run: ./tests/validate_qemu.sh mqttlog-pub-sub
+          - name: Run tests with mqttlogctl and ioctl
+            run: ./tests/validate_qemu.sh mqttlogctl
           - name: Stop qemu image
             if: always()
             run: ./tests/validate_qemu.sh stop
