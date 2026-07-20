@@ -12,7 +12,7 @@
 
 // struct defining an entry of the ringbuffer
 #define MQTTLOG_MAX_TOPIC_LEN    128
-#define MQTTLOG_MAX_PAYLOAD_LEN 1024
+#define MQTTLOG_MAX_PAYLOAD_LEN  512
 struct mqttlog_entry {
     __u64 sequence;
     ktime_t timestamp;
@@ -22,10 +22,10 @@ struct mqttlog_entry {
 };
 
 // maximum length for string-conversion buffer
-#define MQTTLOG_MAX_STRING_LEN  2048
+#define MQTTLOG_MAX_STRING_LEN  1024
 
 // maximum buffer length for read()
-#define MQTTLOG_MAX_BUFFER_LEN  4096
+#define MQTTLOG_MAX_BUFFER_LEN  2048
 
 
 // enum for the potential json/mqtt object entries
