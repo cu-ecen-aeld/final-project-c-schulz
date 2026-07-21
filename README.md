@@ -3,6 +3,7 @@
 
 ## Project Overview
 Please see the [Project Overview page](../../wiki/Project-Overview) for the project description, and the [Project Schedule page](https://github.com/users/c-schulz/projects/2/views/1?visibleFields=%5B%22Title%22%2C%22Assignees%22%2C%22Status%22%2C357876735%5D&groupedBy%5BcolumnId%5D=357876735) for the project timeline and user stories.
+The [Project Video](../../wiki/Project-Video) page links to a small demo video.
 
 ## Build and install buildroot image for *Raspberry Pi Zero W*
 
