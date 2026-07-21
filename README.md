@@ -76,7 +76,7 @@ To interact with the embedded device, an MQTT broker is required. The following 
     sudo snap install mqtt-explorer
     ```
 
-## Inspect *Raspberry Pi Zero W*
+## Run image on *Raspberry Pi Zero W*
 
 Now you should be able to install and test your image on target hardware.
 
